@@ -13,6 +13,7 @@
 import random
 import typing
 from heuristics import heuristic
+from minimax import minimax
 
 
 # info is called when you create your Battlesnake on play.battlesnake.com
