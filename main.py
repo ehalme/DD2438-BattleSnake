@@ -12,6 +12,7 @@
 
 import random
 import typing
+from heuristics import heuristic
 
 
 # info is called when you create your Battlesnake on play.battlesnake.com
@@ -126,3 +127,4 @@ if __name__ == "__main__":
          "move": move, 
         "end": end
     })
+
