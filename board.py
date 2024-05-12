@@ -1,7 +1,12 @@
 import typing
 from enum import Enum
 
-from main import Action
+class Action(Enum):
+    """Helper class for state updating"""
+    up = 0
+    down = 1
+    left = 3
+    right = 4
 
 class BoardState(Enum):
     """Helper class for state assignment"""
@@ -14,8 +19,10 @@ class BoardState(Enum):
 class Board:
     """
     A class to represent the board for fast simulation during search
+
+    TODO: Check if the snake only should decay if the head is in the hazard or of any body part is in the hazard.
     """    
-    def __init__(self, board: typing.Dict, max_health: int, hazard_decay: int):
+    def __init__(self, board: typing.Dict, max_health: int, hazard_decay: int, step_decay: int):
         self.height = board["height"]
         self.width = board["width"]
         self.foods = board["food"]
@@ -23,8 +30,9 @@ class Board:
         self.snakes = board["snakes"]
         self.max_health = max_health
         self.hazard_decay = hazard_decay
+        self.step_decay = step_decay
 
-    def eat_food(self, snake, pos):
+    def eat_food(self, snake: typing.Dict, pos: typing.Dict) -> None:
         """
         Removes the food at the given position from the board,
         gives the given snake max health and increases its length.
@@ -32,11 +40,10 @@ class Board:
         try:
             self.foods.remove(pos)
             snake['health'] = self.max_health
-            snake['length'] += 1
         except Exception:
             print("Could not eat food at position: ", pos, ", snake: ", snake)
 
-    def kill_snake(self, snake):
+    def kill_snake(self, snake: typing.Dict) -> None:
         """Removes the snake from the board"""
         try:
             self.snakes.remove(snake)
@@ -69,11 +76,17 @@ class Board:
             died = False
             ate_food = False
 
+            # remove step decay before checking if food is eaten so a snake
+            # can eat a piece of food if its on 1hp
+            snake['health'] -= self.step_decay
+
             if BoardState.food in head_states:
                 snakes_to_eat.append((snake, next_head))
+                self.eat_food(snake, next_head)
                 ate_food = True
 
-            if BoardState.hazard in head_states:
+            # Not sure if this should be before or after eating food...
+            if BoardState.hazard in head_states: 
                 snake['health'] -= self.hazard_decay
 
             if BoardState.snake_head in head_states:
@@ -82,7 +95,6 @@ class Board:
 
             if died or snake['health'] <= 0:
                 # Snake died
-                #self.kill_snake(snake)
                 snakes_to_kill.append(snake)
                 continue
 
@@ -92,7 +104,7 @@ class Board:
         for snake, next_head in snakes_to_eat:
             # If we ate food, we just need to move the head
             # since the new body piece will spawn at the tail
-            self.eat_food(snake, next_head)
+            snake['length'] += 1
             # Move the snake
             snake['head'] = next_head
             snake['body'].insert(0, next_head)
@@ -111,7 +123,7 @@ class Board:
 
     def get_cell_state(self, position: typing.Dict) -> typing.Dict[BoardState, object]:
         """
-        Returns a list of states of a given position. 
+        Returns a dict of states of a given position. 
         Returns Dict[BoardState, object] or None if out of bounds.
         """
         # Returns a dict because multiple states can appear on one tile
@@ -156,7 +168,7 @@ class Board:
         return board
 
 
-    def _check_collision(self, snake, other_snake):
+    def _check_collision(self, snake: typing.Dict, other_snake: typing.Dict) -> bool:
         """returns true if snake died"""
 
         if snake['length'] > other_snake['length']:
@@ -167,7 +179,7 @@ class Board:
         # Else they're equal lenght and both die
         return True
 
-    def _get_next_head(self, head, move):
+    def _get_next_head(self, head: typing.Dict, move: Action) -> typing.Dict:
         if move == Action.up:
             return {"x": head["x"], "y": head["y"] + 1}
         elif move == Action.down:

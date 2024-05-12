@@ -1,8 +1,40 @@
 import numpy as np
 import matplotlib.pyplot as plt 
 
-from board import Board, BoardState
-from main import Action
+from board import Board, BoardState, Action
+
+def show_boards(datas, rows, cols):
+    fig = plt.figure()
+    for i in range(1,len(datas)+1):
+        fig.add_subplot(rows, cols, i)
+        plt.imshow(datas[i-1], origin="lower", interpolation="None")
+        plt.xticks(range(boardState.width))
+        plt.yticks(range(boardState.height))
+        plt.grid()
+
+    plt.show()
+
+def get_board_img(boardState):
+    board = boardState.get_board_matrix()
+    data = np.zeros((boardState.width, boardState.height, 3), dtype=np.float32)
+
+    for x in range(boardState.width):
+        for y in range(boardState.height):
+            if BoardState.snake_body in board[x][y]:
+                data[x,y,board[x][y][BoardState.snake_body]["m"]] = 0.8
+            elif BoardState.snake_head in board[x][y]:
+                data[x,y,board[x][y][BoardState.snake_head]["m"]] = 1
+            elif BoardState.food in board[x][y]:
+                data[x,y,1] = 1
+                data[x,y,0] = 1
+            elif BoardState.hazard in board[x][y]:
+                data[x,y,0] = 0.5
+                data[x,y,2] = 0.5
+
+    # Transpose the matrix
+    transposed_matrix = np.transpose(data, axes=(1, 0, 2))
+
+    return transposed_matrix
 
 if __name__ == "__main__":   
     s1 = {
@@ -88,41 +120,8 @@ if __name__ == "__main__":
                 ]
             }
 
-    def show_boards(datas, rows, cols):
-        fig = plt.figure()
-        for i in range(1,len(datas)+1):
-            fig.add_subplot(rows, cols, i)
-            plt.imshow(datas[i-1], origin="lower", interpolation="None")
-            plt.xticks(range(boardState.width))
-            plt.yticks(range(boardState.height))
-            plt.grid()
 
-        plt.show()
-
-    def get_board_img(boardState):
-        board = boardState.get_board_matrix()
-        data = np.zeros((boardState.width, boardState.height, 3), dtype=np.float32)
-
-        for x in range(boardState.width):
-            for y in range(boardState.height):
-                if BoardState.snake_body in board[x][y]:
-                    data[x,y,board[x][y][BoardState.snake_body]["m"]] = 0.8
-                elif BoardState.snake_head in board[x][y]:
-                    data[x,y,board[x][y][BoardState.snake_head]["m"]] = 1
-                elif BoardState.food in board[x][y]:
-                    data[x,y,1] = 1
-                    data[x,y,0] = 1
-                elif BoardState.hazard in board[x][y]:
-                    data[x,y,0] = 0.5
-                    data[x,y,2] = 0.5
-
-        # Transpose the matrix
-        transposed_matrix = np.transpose(data, axes=(1, 0, 2))
-
-        return transposed_matrix
-
-
-    boardState = Board(b_example, 100, -2)
+    boardState = Board(b_example, max_health=100, hazard_decay=2, step_decay=1)
     b0 = get_board_img(boardState)
 
     moves = {
@@ -130,12 +129,48 @@ if __name__ == "__main__":
         "totally-unique-snake-id2": Action.left, # green
         "totally-unique-snake-id3": Action.up # blue
     }
-    boardState.move_snakes(moves)
+    moves2 = {
+        "totally-unique-snake-id1": Action.right, # red
+        "totally-unique-snake-id2": Action.up, # green
+        "totally-unique-snake-id3": Action.right # blue
+    }
 
+    boardState.move_snakes(moves)
     b1 = get_board_img(boardState)
 
+    print(1)
     for snake in boardState.snakes:
         print(snake)
 
-    show_boards((b0, b1), 1, 2)
+    boardState.move_snakes(moves)
+    b2 = get_board_img(boardState)
+
+    print(2)
+    for snake in boardState.snakes:
+        print(snake)
+
+    boardState.move_snakes(moves)
+    b3 = get_board_img(boardState)
+
+    print(3)
+    for snake in boardState.snakes:
+        print(snake)
+
+    boardState.move_snakes(moves)
+    b4 = get_board_img(boardState)
+
+    print(4)
+    for snake in boardState.snakes:
+        print(snake)
+
+    boardState.move_snakes(moves2)
+    for i in range(2):
+        boardState.move_snakes(moves)
+    b5 = get_board_img(boardState)
+
+    print(5)
+    for snake in boardState.snakes:
+        print(snake)
+
+    show_boards((b0, b1, b2, b3, b4, b5), 2, 3)
 

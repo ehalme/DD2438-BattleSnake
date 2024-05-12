@@ -16,15 +16,7 @@ from enum import Enum
 
 from heuristics import Heuristic
 from minimax import minimax
-from board import Board, BoardState
-
-
-class Action(Enum):
-    """Helper class for state updating"""
-    up = 0
-    down = 1
-    left = 3
-    right = 4
+from board import Board, BoardState, Action
 
 
 # info is called when you create your Battlesnake on play.battlesnake.com
