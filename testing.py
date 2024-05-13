@@ -134,8 +134,10 @@ if __name__ == "__main__":
         }
     
     manual_control = False
-    fps = 10
+    fps = 3
+    max_depth = 6
 
+    manual_snake = s1
     heuristic = Heuristic(weights)
     
     boardState = Board(b_example, max_health=100, hazard_decay=2, step_decay=1) # temp
@@ -156,48 +158,48 @@ if __name__ == "__main__":
 
     # Main loop
     running = True
-    last_update = time.time()
-    action1, action2 = None, None
+    last_update = time.time() + 1
+    manual_action = None
+    actions = dict()
+    action_manual = Action.up
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif event.type == pygame.KEYDOWN and manual_control:
+            elif event.type == pygame.KEYDOWN:
                 # Check for key presses
                 if event.key == pygame.K_w:
-                    action1 = Action.up
+                    action_manual = Action.up
                 elif event.key == pygame.K_s:
-                    action1 = Action.down
+                    action_manual = Action.down
                 elif event.key == pygame.K_d:
-                    action1 = Action.right
+                    action_manual = Action.right
                 elif event.key == pygame.K_a:
-                    action1 = Action.left
+                    action_manual = Action.left                    
 
-                if event.key == pygame.K_UP:
-                    action2 = Action.up
-                elif event.key == pygame.K_DOWN:
-                    action2 = Action.down
-                elif event.key == pygame.K_RIGHT:
-                    action2 = Action.right
-                elif event.key == pygame.K_LEFT:
-                    action2 = Action.left
+        if time.time() - last_update > 1/fps:
+            json_board = boardState.get_json_board()
+            for snake in boardState.snakes:
+                if manual_control and snake["id"] == manual_snake["id"]:
+                    actions[manual_snake["id"]] = action_manual
+                    continue
 
-                if action1 is not None and action2 is not None:
-                    boardState.move_snakes({game_state["you"]["id"]: action1, game_state["board"]["snakes"][1]["id"]: action2})
-                    action1, action2 = None, None
-                    
+                game_state = {
+                    "game": {"timeout": 500, },
+                    "board": json_board,
+                    "you": snake,
+                }
 
-        if not manual_control and time.time() - last_update > 1/fps and boardState.is_snake_alive(game_state["you"]["id"]):
-            action = start_minimax(game_state, heuristic, max_depth=5, max_health=100, hazard_decay=0, step_decay=1)
-            print("Took action: ", {game_state["you"]["id"]: action})
-            boardState.move_snakes({game_state["you"]["id"]: action})
+                action = start_minimax(game_state, heuristic, max_depth=max_depth, max_health=100, hazard_decay=0, step_decay=1)
+                actions[snake["id"]] = action
+                #actions = {'totally-unique-snake-id1': Action.up, 'totally-unique-snake-id2': Action.up, 'totally-unique-snake-id3': Action.down}
+            
+            boardState.move_snakes(actions)
             last_update = time.time()
+            
                     
         img = boardState.get_board_img()
-        img_surface = numpy_array_to_surface(img*255)
-
-        # Clear the screen
-        screen.fill((255, 255, 255))
+        img_surface = numpy_array_to_surface(img)
 
         # Scale up the image surface
         scaled_img_surface = pygame.transform.scale(img_surface, (screen_width, screen_height))

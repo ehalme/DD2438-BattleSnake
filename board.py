@@ -63,15 +63,15 @@ class Board:
         try:
             self.snakes.remove(killed_snake)
             self.snake_lookup = {k["id"]: v for v, k in enumerate(self.snakes)}
-            self.who_killed_who[killed_snake["id"]] = killer_snake["id"]
-            self.dead_snakes[killed_snake["id"]] = killed_snake
-            #print(killer_snake["id"], " killed, ", killed_snake["id"])
+            print(killer_snake["id"], " killed, ", killed_snake["id"])
         except Exception:
             print("Couldnt kill snake: ", killed_snake)
 
+        self.who_killed_who[killed_snake["id"]] = killer_snake["id"]
+        self.dead_snakes[killed_snake["id"]] = killed_snake
+
     def move_snakes(self, moves: typing.Dict[str, Action]) -> None:
         """Takes a dictionary of each snakes (key: snake_id) action and applies them to the board"""
-        # TODO: Change so that we check if we kill snakes after we move the snakes
         # Simulate a snake moving in the given direction        
         snakes_to_kill = []
         snakes_to_eat = []
@@ -142,6 +142,7 @@ class Board:
         self._reset_observation_buffer() # Reset observation buffer after we moved all objects
 
         # Check if any snakes should be killed off after they moved...
+        snakes_to_kill = []
         for snake in self.snakes:
             if snake["id"] not in moves:
                 continue
@@ -153,12 +154,12 @@ class Board:
 
             if BoardState.snake_body in head_states:
                 # There can only ever be one snake body part in a cell
-                self.kill_snake(head_states[BoardState.snake_body][0], snake)
+                snakes_to_kill.append((head_states[BoardState.snake_body][0], snake))
                 continue
 
             if head in snake["body"][1:]:
                 # Inside of itself
-                self.kill_snake(snake, snake)
+                snakes_to_kill.append((snake, snake))
                 continue
 
             if BoardState.snake_head in head_states:
@@ -171,10 +172,14 @@ class Board:
                     col = self._check_collision(snake, other_snake)
                     if col == Collision.won:
                         # Killed snake
-                        self.kill_snake(snake, other_snake)
+                        snakes_to_kill.append((snake, other_snake))
                     elif col == Collision.draw:
-                        self.kill_snake(snake, other_snake)
-                        self.kill_snake(other_snake, snake)
+                        snakes_to_kill.append((snake, other_snake))
+                        snakes_to_kill.append((other_snake, snake))
+
+        # Kill off the snakes
+        for killer, killed in snakes_to_kill:
+            self.kill_snake(killer, killed)
 
         self._reset_observation_buffer() # Reset observation buffer after we moved all objects
 
@@ -280,15 +285,15 @@ class Board:
         for x in range(self.width):
             for y in range(self.height):
                 if BoardState.snake_body in board[x][y]:
-                    data[x,y,board[x][y][BoardState.snake_body][0]["m"]] = 0.8
+                    data[x,y,board[x][y][BoardState.snake_body][0]["m"]] = 0.8 * 255
                 elif BoardState.snake_head in board[x][y]:
-                    data[x,y,board[x][y][BoardState.snake_head][0]["m"]] = 1
+                    data[x,y,board[x][y][BoardState.snake_head][0]["m"]] = 1 * 255
                 elif BoardState.food in board[x][y]:
-                    data[x,y,1] = 1
-                    data[x,y,0] = 1
+                    data[x,y,1] = 1 * 255
+                    data[x,y,0] = 1 * 255
                 elif BoardState.hazard in board[x][y]:
-                    data[x,y,0] = 0.5
-                    data[x,y,2] = 0.5
+                    data[x,y,0] = 0.5 * 255
+                    data[x,y,2] = 0.5 * 255
 
         # Transpose the matrix
         data = np.transpose(data, axes=(1, 0, 2))
@@ -297,6 +302,17 @@ class Board:
     
     def copy(self):
         return copy.deepcopy(self)
+    
+    def get_json_board(self):
+        data = {
+                "height": self.height,
+                "width": self.width,
+                "food": self.foods,
+                "hazards": self.hazards,
+                "snakes": self.snakes,
+            }
+        
+        return data
 
     def _reset_observation_buffer(self):
         self.observation_buffer = dict()
