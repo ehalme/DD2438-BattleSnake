@@ -133,7 +133,7 @@ if __name__ == "__main__":
             "friendly_killed": -1,
         }
     
-    manual_control = True
+    manual_control = False
     fps = 10
 
     heuristic = Heuristic(weights)
@@ -183,12 +183,11 @@ if __name__ == "__main__":
                     action2 = Action.left
 
                 if action1 is not None and action2 is not None:
-                    boardState.move_snakes({game_state["you"]["id"]: action1})
-                    boardState.move_snakes({game_state["board"]["snakes"][1]["id"]: action2})
+                    boardState.move_snakes({game_state["you"]["id"]: action1, game_state["board"]["snakes"][1]["id"]: action2})
                     action1, action2 = None, None
                     
 
-        if not manual_control and time.time() - last_update > 1/fps:
+        if not manual_control and time.time() - last_update > 1/fps and boardState.is_snake_alive(game_state["you"]["id"]):
             action = start_minimax(game_state, heuristic, max_depth=5, max_health=100, hazard_decay=0, step_decay=1)
             print("Took action: ", {game_state["you"]["id"]: action})
             boardState.move_snakes({game_state["you"]["id"]: action})

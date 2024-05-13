@@ -65,7 +65,7 @@ class Board:
             self.snake_lookup = {k["id"]: v for v, k in enumerate(self.snakes)}
             self.who_killed_who[killed_snake["id"]] = killer_snake["id"]
             self.dead_snakes[killed_snake["id"]] = killed_snake
-            print(killer_snake["id"], " killed, ", killed_snake["id"])
+            #print(killer_snake["id"], " killed, ", killed_snake["id"])
         except Exception:
             print("Couldnt kill snake: ", killed_snake)
 
@@ -96,10 +96,6 @@ class Board:
                 snakes_to_kill.append((snake, snake))
                 continue
 
-            if BoardState.snake_body in head_states:
-                snakes_to_kill.append((head_states[BoardState.snake_body], snake))
-                continue
-
             ate_food = False
 
             # remove step decay before checking if food is eaten so a snake
@@ -115,16 +111,6 @@ class Board:
             # Not sure if this should be before or after eating food...
             if self.hazard_decay > 0 and BoardState.hazard in head_states: 
                 snake['health'] -= self.hazard_decay
-
-            if BoardState.snake_head in head_states:
-                # check which snakes wins
-                col = self._check_collision(snake, head_states[BoardState.snake_head])
-                if col == Collision.won:
-                    # Killed snake
-                    snakes_to_kill.append((snake, head_states[BoardState.snake_head]))
-                elif col == Collision.draw:
-                    snakes_to_kill.append((snake, head_states[BoardState.snake_head]))
-                    snakes_to_kill.append((head_states[BoardState.snake_head], snake))
 
             if snake['health'] <= 0:
                 # Snake died
@@ -152,6 +138,43 @@ class Board:
             snake['head'] = next_head
             snake['body'][1:] = snake['body'][0:-1]
             snake['body'][0] = next_head
+
+        self._reset_observation_buffer() # Reset observation buffer after we moved all objects
+
+        # Check if any snakes should be killed off after they moved...
+        for snake in self.snakes:
+            if snake["id"] not in moves:
+                continue
+            
+            head = snake["head"]
+
+            # Get the state of the cell and see if we need to kill any snakes
+            head_states = self.get_cell_state(head)
+
+            if BoardState.snake_body in head_states:
+                # There can only ever be one snake body part in a cell
+                self.kill_snake(head_states[BoardState.snake_body][0], snake)
+                continue
+
+            if head in snake["body"][1:]:
+                # Inside of itself
+                self.kill_snake(snake, snake)
+                continue
+
+            if BoardState.snake_head in head_states:
+                for other_snake in head_states[BoardState.snake_head]: # This is a list of all snakes in that cell
+                    if snake["id"] == other_snake["id"]:
+                        # Its just our own phat head
+                        continue
+
+                    # check which snakes wins
+                    col = self._check_collision(snake, other_snake)
+                    if col == Collision.won:
+                        # Killed snake
+                        self.kill_snake(snake, other_snake)
+                    elif col == Collision.draw:
+                        self.kill_snake(snake, other_snake)
+                        self.kill_snake(other_snake, snake)
 
         self._reset_observation_buffer() # Reset observation buffer after we moved all objects
 
@@ -190,8 +213,11 @@ class Board:
 
         for snake in self.snakes:
             if position in snake['body']:
-                state[self._get_snake_state(snake, position)] = snake
-                break
+                s = self._get_snake_state(snake, position)
+                if s in state:
+                    state[s].append(snake)
+                else:
+                    state[s] = [snake,]
 
         if len(state) == 0:
             state[BoardState.free] = True
@@ -254,9 +280,9 @@ class Board:
         for x in range(self.width):
             for y in range(self.height):
                 if BoardState.snake_body in board[x][y]:
-                    data[x,y,board[x][y][BoardState.snake_body]["m"]] = 0.8
+                    data[x,y,board[x][y][BoardState.snake_body][0]["m"]] = 0.8
                 elif BoardState.snake_head in board[x][y]:
-                    data[x,y,board[x][y][BoardState.snake_head]["m"]] = 1
+                    data[x,y,board[x][y][BoardState.snake_head][0]["m"]] = 1
                 elif BoardState.food in board[x][y]:
                     data[x,y,1] = 1
                     data[x,y,0] = 1
