@@ -131,6 +131,7 @@ if __name__ == "__main__":
             "death": -1000,
             "enemy_killed": 1,
             "friendly_killed": -1,
+            "health": 0.01,
         }
     
     manual_control = False
