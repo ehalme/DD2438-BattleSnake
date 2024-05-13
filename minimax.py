@@ -72,7 +72,7 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
             highest_score = score
             best_actions = actions
 
-    print("Minimax time: ", (time.perf_counter_ns() - start_time) / 1e6)
+    #print("Minimax time: ", (time.perf_counter_ns() - start_time) / 1e6)
 
     return best_actions[my_snake]
 

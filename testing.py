@@ -14,7 +14,7 @@ def numpy_array_to_surface(array):
 
 if __name__ == "__main__":   
     s1 = {
-            "id": "totally-unique-snake-id1",
+            "id": "id1",
             "m": 0,
             "name": "Sneky McSnek Face1",
             "health": 54,
@@ -36,7 +36,7 @@ if __name__ == "__main__":
         }
 
     s2 = {
-            "id": "totally-unique-snake-id2",
+            "id": "id2",
             "m": 1,
             "name": "Sneky McSnek Face1",
             "health": 54,
@@ -58,7 +58,7 @@ if __name__ == "__main__":
         }
 
     s3 = {
-            "id": "totally-unique-snake-id3",
+            "id": "id3",
             "name": "Sneky McSnek Face2",
             "m": 2,
             "health": 54,
@@ -80,7 +80,7 @@ if __name__ == "__main__":
         }
     
     s4 = {
-            "id": "totally-unique-snake-id4",
+            "id": "id4",
             "name": "Sneky McSnek Face3",
             "m": 2,
             "health": 54,
@@ -128,7 +128,7 @@ if __name__ == "__main__":
             "food_distance": 1,
             "enemy_distance": -0.5,
             "friendly_distance": 0,
-            "death": -10,
+            "death": -1000,
             "enemy_killed": 1,
             "friendly_killed": -1,
         }
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     manual_snake = s1
     heuristic = Heuristic(weights)
     
-    boardState = Board(b_example, max_health=100, hazard_decay=2, step_decay=1) # temp
+    boardState = Board(b_example, max_health=100, hazard_decay=2, step_decay=1, print_logs=True) # temp
   
     # Scale factor for rendering the image larger
     SCALE_FACTOR = 30
@@ -158,7 +158,7 @@ if __name__ == "__main__":
 
     # Main loop
     running = True
-    last_update = time.time() + 1
+    last_update = time.time() + 0.25
     manual_action = None
     actions = dict()
     action_manual = Action.up

@@ -31,7 +31,7 @@ class Board:
 
     TODO: Check if the snake only should decay if the head is in the hazard or of any body part is in the hazard. -edit: will not do decay....
     """    
-    def __init__(self, board: typing.Dict, max_health: int, hazard_decay: int, step_decay: int):
+    def __init__(self, board: typing.Dict, max_health: int, hazard_decay: int, step_decay: int, print_logs=False):
         """Disable decay by setting it to a value less than 0"""
         self.height = board["height"]
         self.width = board["width"]
@@ -47,6 +47,8 @@ class Board:
         self.who_killed_who = dict()
         self.dead_snakes = dict()
 
+        self.print_logs = print_logs
+
     def eat_food(self, snake: typing.Dict, pos: typing.Dict) -> None:
         """
         Removes the food at the given position from the board,
@@ -58,12 +60,14 @@ class Board:
         except Exception:
             print("Could not eat food at position: ", pos, ", snake: ", snake)
 
-    def kill_snake(self, killer_snake: typing.Dict, killed_snake: typing.Dict) -> None:
+    def kill_snake(self, killer_snake: typing.Dict, killed_snake: typing.Dict, reason: str) -> None:
         """Removes the snake from the board"""
         try:
             self.snakes.remove(killed_snake)
             self.snake_lookup = {k["id"]: v for v, k in enumerate(self.snakes)}
-            print(killer_snake["id"], " killed, ", killed_snake["id"])
+
+            if (self.print_logs):
+                print(killer_snake["id"], " killed, ", killed_snake["id"], ", reason: ", reason)
         except Exception:
             print("Couldnt kill snake: ", killed_snake)
 
@@ -72,7 +76,7 @@ class Board:
 
     def move_snakes(self, moves: typing.Dict[str, Action]) -> None:
         """Takes a dictionary of each snakes (key: snake_id) action and applies them to the board"""
-        # Simulate a snake moving in the given direction        
+        # Simulate a snake moving in the given direction
         snakes_to_kill = []
         snakes_to_eat = []
         snakes_to_move = []
@@ -93,7 +97,7 @@ class Board:
             # Check if the snake is dead
             if head_states is None:
                 # Snake died, outside of bounds
-                snakes_to_kill.append((snake, snake))
+                snakes_to_kill.append((snake, snake, "Out of bounds"))
                 continue
 
             ate_food = False
@@ -114,7 +118,7 @@ class Board:
 
             if snake['health'] <= 0:
                 # Snake died
-                snakes_to_kill.append((snake, snake))
+                snakes_to_kill.append((snake, snake, "Ran out of health"))
                 continue
 
             if not ate_food:
@@ -129,8 +133,8 @@ class Board:
             snake['body'].insert(0, next_head)
 
         # Kill off the snakes
-        for killer, killed in snakes_to_kill:
-            self.kill_snake(killer, killed)
+        for killer, killed, reason in snakes_to_kill:
+            self.kill_snake(killer, killed, reason)
 
         # Move the remaining snakes
         for snake, next_head in snakes_to_move:           
@@ -154,12 +158,12 @@ class Board:
 
             if BoardState.snake_body in head_states:
                 # There can only ever be one snake body part in a cell
-                snakes_to_kill.append((head_states[BoardState.snake_body][0], snake))
+                snakes_to_kill.append((head_states[BoardState.snake_body][0], snake, "ran into other snake body"))
                 continue
 
             if head in snake["body"][1:]:
                 # Inside of itself
-                snakes_to_kill.append((snake, snake))
+                snakes_to_kill.append((snake, snake, "ran into itself"))
                 continue
 
             if BoardState.snake_head in head_states:
@@ -172,14 +176,14 @@ class Board:
                     col = self._check_collision(snake, other_snake)
                     if col == Collision.won:
                         # Killed snake
-                        snakes_to_kill.append((snake, other_snake))
+                        snakes_to_kill.append((snake, other_snake, "head on collision"))
                     elif col == Collision.draw:
-                        snakes_to_kill.append((snake, other_snake))
-                        snakes_to_kill.append((other_snake, snake))
+                        snakes_to_kill.append((snake, other_snake, "traded head on collision"))
+                        snakes_to_kill.append((other_snake, snake, "traded head on collision"))
 
         # Kill off the snakes
-        for killer, killed in snakes_to_kill:
-            self.kill_snake(killer, killed)
+        for killer, killed, reason in snakes_to_kill:
+            self.kill_snake(killer, killed, reason)
 
         self._reset_observation_buffer() # Reset observation buffer after we moved all objects
 
