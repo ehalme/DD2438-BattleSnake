@@ -1,44 +1,130 @@
 import typing
+from board import Board
 
 class Heuristic:
     def __init__(self, weights: typing.Dict):
+        """
+        Weights are a dictionary of the form:
+        {
+            "food_distance": X,
+            "enemy_distance": X,
+            "friendly_distance": X,
+            "death": X,
+            "enemy_killed": X,
+            "friendly_killed": X,
+            ...
+        }
+        """
         self.weights = weights
+    
+    def get_score(self, board: Board, my_snake: str, friendly_snakes: typing.List[str], enemy_snakes: typing.List[str]) -> float:
+        """
+        Evaluates a game state and returns a score given the current board, my snake, friendly snakes and the other snakes.
+        board: Board object
+        my_snake: my snake id
+        friendly_snakes: list of friendly snake ids
+        enemys_snakes: list of enemy snake ids
+        """
+        # Closest food
+        food_distances = self.calculate_distances_to_food(board, my_snake)
+        closest_food_point, closest_food_distance = self.find_closest_point(food_distances)
 
+        # Closest enemy
+        enemy_distances = self.calculate_distance_to_snakes(board, my_snake, enemy_snakes)
+        closest_enemy_point, closest_enemy_distance = self.find_closest_point(enemy_distances)
+
+        # Closest friendly 
+        friendly_distances = self.calculate_distance_to_snakes(board, my_snake, friendly_snakes)
+        closest_friendly_point, closest_friendly_distance = self.find_closest_point(friendly_distances)
+
+        # Are we alive? :O
+        is_alive = board.is_snake_alive(my_snake)
+
+        # Did we kill enemies?
+        killed_enemies = self.calculate_killed_snakes(board, my_snake, enemy_snakes)
+
+        # Did we kill friendlies? :(
+        killed_friendly = self.calculate_killed_snakes(board, my_snake, friendly_snakes)
+        
+        # Calculate the heuristic score
+        score = self.weights["food_distance"] * closest_food_distance \
+              + self.weights["enemy_distance"] * closest_enemy_distance \
+              + self.weights["friendly_distance"] * closest_friendly_distance \
+              + self.weights["death"] * int(is_alive) \
+              + self.weights["enemy_killed"] * killed_enemies \
+              + self.weights["friendly_killed"] * killed_friendly 
+    
+        return score
+
+    def calculate_killed_snakes(self, board: typing.Dict, my_snake:str,  other_snakes: typing.List[str]):
+        if other_snakes is None or len(other_snakes) < 1:
+            return 0
+        
+        killed = 0        
+        for snake in other_snakes:
+            killer = board.get_snake_killer(snake)
+            if killer is not None and killer == my_snake:
+                killed += 1
+
+        return killed
+    
+    def calculate_distances_to_food(self, board: Board, my_snake: str) -> typing.Dict:
+        """Calculate the Manhattan distance to the all the food sources"""
+        if board.foods is None or len(board.foods) < 1:
+            return None
+        
+        distances = {}
+        
+        m_snake = board.get_snake(my_snake)
+        snake_head = m_snake["head"]
+        
+        for food in board.foods:
+            # key: point on board, value: distance from snake head to food
+            distances[food] = self.distance_metric(snake_head, food)
+        
+        return distances
+
+    def calculate_distance_to_snakes(self, board: Board, my_snake: str, other_snakes: typing.List[str]):
+        if other_snakes is None or len(other_snakes) < 1:
+            return None
+            
+        distances = {}
+        
+        m_snake = board.get_snake(my_snake)
+        m_snake_head = m_snake["head"]
+        
+        for o in other_snakes:
+            o_snake = board.get_snake(o)
+            dists = {}
+            for pos in o_snake["body"]:
+                dists[pos] = self.distance_metric(m_snake_head, pos)
+
+            closest_point, closest_distance = self.find_closest_point(dists)
+            distances[closest_point] = closest_distance
+
+        return distances
+        
     def get_heat_map(self):
         pass
     
-    def get_score(self, game_state: typing.Dict):
-        # Evaluate the game state based on factors like length, food distance, etc.
-        snake_length = len(game_state['you']['body'])
-        food_distance = self.calculate_distance_to_food(game_state)
-    
-        # Assign weights to factors
-        length_weight = 1
-        food_distance_weight = -1
-    
-        # Calculate the heuristic score
-        score = length_weight * snake_length + food_distance_weight * food_distance
-    
-        return score
-    
-    def calculate_distance_to_food(self, game_state: typing.Dict):
-        # Calculate the Manhattan distance to the closest food source
-        snake_head = game_state['you']['body'][0]
-        closest_food = self.find_closest_food(snake_head, game_state['board']['food'])
-    
-        distance = abs(snake_head['x'] - closest_food['x']) + abs(snake_head['y'] - closest_food['y'])
-    
-        return distance
-    
-    def find_closest_food(self, snake_head: typing.Dict, food_positions: typing.Dict):
-        # Find the closest food source to the snake's head
+    def find_closest_point(self, distances: typing.Dict) -> (typing.Dict, float):
+        """
+        Returns the closest point in the given distance dictionary.
+        distances has the strucutre: 
+            key: point on board, value: distance from point on board to reference point
+        """
+        if distances is None or len(distances) < 1:
+            return None
+        
         closest_distance = float('inf')
-        closest_food = None
+        closest_point = None
     
-        for food in food_positions:
-                distance = abs(snake_head['x'] - food['x']) + abs(snake_head['y'] - food['y'])
-                if distance < closest_distance:
-                        closest_distance = distance
-                        closest_food = food
+        for point in distances:
+            if distances[point] < closest_distance:
+                closest_distance = distances[point]
+                closest_point = point
     
-        return closest_food
+        return closest_point, closest_distance
+
+    def distance_metric(self, point1: typing.Dict, point2: typing.Dict) -> float:
+        return abs(point1['x'] - point2['x']) + abs(point1['y'] - point2['y'])

@@ -1,7 +1,6 @@
-import numpy as np
 import matplotlib.pyplot as plt 
 
-from board import Board, BoardState, Action
+from board import Board, Action
 
 def show_boards(datas, rows, cols):
     fig = plt.figure()
@@ -13,28 +12,6 @@ def show_boards(datas, rows, cols):
         plt.grid()
 
     plt.show()
-
-def get_board_img(boardState):
-    board = boardState.get_board_matrix()
-    data = np.zeros((boardState.width, boardState.height, 3), dtype=np.float32)
-
-    for x in range(boardState.width):
-        for y in range(boardState.height):
-            if BoardState.snake_body in board[x][y]:
-                data[x,y,board[x][y][BoardState.snake_body]["m"]] = 0.8
-            elif BoardState.snake_head in board[x][y]:
-                data[x,y,board[x][y][BoardState.snake_head]["m"]] = 1
-            elif BoardState.food in board[x][y]:
-                data[x,y,1] = 1
-                data[x,y,0] = 1
-            elif BoardState.hazard in board[x][y]:
-                data[x,y,0] = 0.5
-                data[x,y,2] = 0.5
-
-    # Transpose the matrix
-    transposed_matrix = np.transpose(data, axes=(1, 0, 2))
-
-    return transposed_matrix
 
 if __name__ == "__main__":   
     s1 = {
@@ -122,7 +99,7 @@ if __name__ == "__main__":
 
 
     boardState = Board(b_example, max_health=100, hazard_decay=2, step_decay=1)
-    b0 = get_board_img(boardState)
+    b0 = boardState.get_board_img
 
     moves = {
         "totally-unique-snake-id1": Action.up, # red
@@ -136,28 +113,28 @@ if __name__ == "__main__":
     }
 
     boardState.move_snakes(moves)
-    b1 = get_board_img(boardState)
+    b1 = boardState.get_board_img
 
     print(1)
     for snake in boardState.snakes:
         print(snake)
 
     boardState.move_snakes(moves)
-    b2 = get_board_img(boardState)
+    b2 = boardState.get_board_img
 
     print(2)
     for snake in boardState.snakes:
         print(snake)
 
     boardState.move_snakes(moves)
-    b3 = get_board_img(boardState)
+    b3 = boardState.get_board_img
 
     print(3)
     for snake in boardState.snakes:
         print(snake)
 
     boardState.move_snakes(moves)
-    b4 = get_board_img(boardState)
+    b4 = boardState.get_board_img
 
     print(4)
     for snake in boardState.snakes:
@@ -166,7 +143,7 @@ if __name__ == "__main__":
     boardState.move_snakes(moves2)
     for i in range(2):
         boardState.move_snakes(moves)
-    b5 = get_board_img(boardState)
+    b5 = boardState.get_board_img
 
     print(5)
     for snake in boardState.snakes:

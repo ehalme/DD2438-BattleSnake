@@ -14,9 +14,7 @@ import random
 import typing
 from enum import Enum
 
-from heuristics import Heuristic
 from minimax import minimax
-from board import Board, BoardState, Action
 
 
 # info is called when you create your Battlesnake on play.battlesnake.com
