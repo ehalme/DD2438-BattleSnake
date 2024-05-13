@@ -99,7 +99,7 @@ if __name__ == "__main__":
 
 
     boardState = Board(b_example, max_health=100, hazard_decay=2, step_decay=1)
-    b0 = boardState.get_board_img
+    b0 = boardState.get_board_img()
 
     moves = {
         "totally-unique-snake-id1": Action.up, # red
@@ -112,29 +112,46 @@ if __name__ == "__main__":
         "totally-unique-snake-id3": Action.right # blue
     }
 
-    boardState.move_snakes(moves)
-    b1 = boardState.get_board_img
+    new_board = boardState.copy()
+    new_board.move_snakes(moves)
+    new_board.move_snakes(moves)
+    new_board.move_snakes(moves)
+    new_board.move_snakes(moves)
+    new_board.move_snakes(moves)
+    b1 = new_board.get_board_img()
 
+    new_board.move_snakes(moves2)
+    b2 = new_board.get_board_img()
+
+    new_board.move_snakes(moves2)
+    new_board.move_snakes(moves2)
+    new_board.move_snakes(moves2)
+    b3 = new_board.get_board_img()
+
+    b3 = boardState.get_board_img()
+
+    show_boards((b0, b1, b2, b3), 2, 2)
+    exit(1)
     print(1)
     for snake in boardState.snakes:
         print(snake)
 
     boardState.move_snakes(moves)
-    b2 = boardState.get_board_img
+    b2 = boardState.get_board_img()
 
     print(2)
     for snake in boardState.snakes:
         print(snake)
 
     boardState.move_snakes(moves)
-    b3 = boardState.get_board_img
+    b3 = boardState.get_board_img()
 
     print(3)
     for snake in boardState.snakes:
         print(snake)
 
     boardState.move_snakes(moves)
-    b4 = boardState.get_board_img
+    b4 = boardState.get_board_img()
 
     print(4)
     for snake in boardState.snakes:
@@ -143,7 +160,7 @@ if __name__ == "__main__":
     boardState.move_snakes(moves2)
     for i in range(2):
         boardState.move_snakes(moves)
-    b5 = boardState.get_board_img
+    b5 = boardState.get_board_img()
 
     print(5)
     for snake in boardState.snakes:

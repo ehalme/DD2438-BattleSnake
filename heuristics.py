@@ -25,38 +25,44 @@ class Heuristic:
         friendly_snakes: list of friendly snake ids
         enemys_snakes: list of enemy snake ids
         """
+        score = 0
+
         # Closest food
         food_distances = self.calculate_distances_to_food(board, my_snake)
         closest_food_point, closest_food_distance = self.find_closest_point(food_distances)
+
+        if closest_food_distance is not None and closest_food_distance > 0:
+            score += self.weights["food_distance"] * 1/closest_food_distance
 
         # Closest enemy
         enemy_distances = self.calculate_distance_to_snakes(board, my_snake, enemy_snakes)
         closest_enemy_point, closest_enemy_distance = self.find_closest_point(enemy_distances)
 
+        if closest_enemy_distance is not None and closest_enemy_distance > 0:
+            score += self.weights["enemy_distance"] * 1/closest_enemy_distance
+
         # Closest friendly 
         friendly_distances = self.calculate_distance_to_snakes(board, my_snake, friendly_snakes)
         closest_friendly_point, closest_friendly_distance = self.find_closest_point(friendly_distances)
 
+        if closest_friendly_distance is not None and closest_friendly_distance > 0:
+            score += self.weights["friendly_distance"] * 1/closest_friendly_distance
+
         # Are we alive? :O
         is_alive = board.is_snake_alive(my_snake)
+        score += self.weights["death"] * int(is_alive)
 
         # Did we kill enemies?
         killed_enemies = self.calculate_killed_snakes(board, my_snake, enemy_snakes)
+        score += self.weights["enemy_killed"] * killed_enemies
 
         # Did we kill friendlies? :(
         killed_friendly = self.calculate_killed_snakes(board, my_snake, friendly_snakes)
-        
-        # Calculate the heuristic score
-        score = self.weights["food_distance"] * closest_food_distance \
-              + self.weights["enemy_distance"] * closest_enemy_distance \
-              + self.weights["friendly_distance"] * closest_friendly_distance \
-              + self.weights["death"] * int(is_alive) \
-              + self.weights["enemy_killed"] * killed_enemies \
-              + self.weights["friendly_killed"] * killed_friendly 
+        score += self.weights["friendly_killed"] * killed_friendly 
     
         return score
 
-    def calculate_killed_snakes(self, board: typing.Dict, my_snake:str,  other_snakes: typing.List[str]):
+    def calculate_killed_snakes(self, board: Board, my_snake: str, other_snakes: typing.List[str]):
         if other_snakes is None or len(other_snakes) < 1:
             return 0
         
@@ -75,12 +81,13 @@ class Heuristic:
         
         distances = {}
         
-        m_snake = board.get_snake(my_snake)
+        m_snake, _ = board.get_snake(my_snake)
         snake_head = m_snake["head"]
         
         for food in board.foods:
             # key: point on board, value: distance from snake head to food
-            distances[food] = self.distance_metric(snake_head, food)
+            p = (food["x"], food["y"])
+            distances[p] = self.distance_metric(snake_head, food)
         
         return distances
 
@@ -90,14 +97,15 @@ class Heuristic:
             
         distances = {}
         
-        m_snake = board.get_snake(my_snake)
+        m_snake, _ = board.get_snake(my_snake)
         m_snake_head = m_snake["head"]
         
         for o in other_snakes:
-            o_snake = board.get_snake(o)
+            o_snake, _ = board.get_snake(o)
             dists = {}
             for pos in o_snake["body"]:
-                dists[pos] = self.distance_metric(m_snake_head, pos)
+                p = (pos["x"], pos["y"])
+                dists[p] = self.distance_metric(m_snake_head, pos)
 
             closest_point, closest_distance = self.find_closest_point(dists)
             distances[closest_point] = closest_distance
@@ -114,7 +122,7 @@ class Heuristic:
             key: point on board, value: distance from point on board to reference point
         """
         if distances is None or len(distances) < 1:
-            return None
+            return None, None
         
         closest_distance = float('inf')
         closest_point = None

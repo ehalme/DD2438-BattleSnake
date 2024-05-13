@@ -1,13 +1,15 @@
 import typing
 import numpy as np
 from enum import Enum
+import copy
+
 
 class Action(Enum):
     """Helper class for state updating"""
     up = 0
     down = 1
-    left = 3
-    right = 4
+    left = 2
+    right = 3
 
 class BoardState(Enum):
     """Helper class for state assignment"""
@@ -16,6 +18,12 @@ class BoardState(Enum):
     hazard = 2
     snake_body = 3
     snake_head = 4
+
+class Collision(Enum):
+    """Helper class for snake head on collision"""
+    won = 0
+    lost = 1
+    draw = 2
 
 class Board:
     """
@@ -34,9 +42,10 @@ class Board:
         self.hazard_decay = hazard_decay
         self.step_decay = step_decay
 
-        self.observation_buffer = {}
+        self.observation_buffer = dict()
         self.snake_lookup = {k["id"]: v for v, k in enumerate(self.snakes)} # used to retrieve a specific snake based on id fast
         self.who_killed_who = dict()
+        self.dead_snakes = dict()
 
     def eat_food(self, snake: typing.Dict, pos: typing.Dict) -> None:
         """
@@ -55,19 +64,23 @@ class Board:
             self.snakes.remove(killed_snake)
             self.snake_lookup = {k["id"]: v for v, k in enumerate(self.snakes)}
             self.who_killed_who[killed_snake["id"]] = killer_snake["id"]
+            self.dead_snakes[killed_snake["id"]] = killed_snake
+            print(killer_snake["id"], " killed, ", killed_snake["id"])
         except Exception:
             print("Couldnt kill snake: ", killed_snake)
 
     def move_snakes(self, moves: typing.Dict[str, Action]) -> None:
         """Takes a dictionary of each snakes (key: snake_id) action and applies them to the board"""
-        # Simulate a snake moving in the given direction
-        self._reset_observation_buffer()
-        
+        # TODO: Change so that we check if we kill snakes after we move the snakes
+        # Simulate a snake moving in the given direction        
         snakes_to_kill = []
         snakes_to_eat = []
         snakes_to_move = []
 
         for snake in self.snakes:
+            if snake["id"] not in moves:
+                continue
+
             head = snake["head"]
             move = moves[snake["id"]]
             next_head = self._get_next_head(head, move)
@@ -79,7 +92,7 @@ class Board:
 
             # Check if the snake is dead
             if head_states is None:
-                # Snake died
+                # Snake died, outside of bounds
                 snakes_to_kill.append((snake, snake))
                 continue
 
@@ -105,10 +118,13 @@ class Board:
 
             if BoardState.snake_head in head_states:
                 # check which snakes wins
-                won = self._check_collision(snake, head_states[BoardState.snake_head])
-                if won:
+                col = self._check_collision(snake, head_states[BoardState.snake_head])
+                if col == Collision.won:
                     # Killed snake
                     snakes_to_kill.append((snake, head_states[BoardState.snake_head]))
+                elif col == Collision.draw:
+                    snakes_to_kill.append((snake, head_states[BoardState.snake_head]))
+                    snakes_to_kill.append((head_states[BoardState.snake_head], snake))
 
             if snake['health'] <= 0:
                 # Snake died
@@ -137,6 +153,8 @@ class Board:
             snake['body'][1:] = snake['body'][0:-1]
             snake['body'][0] = next_head
 
+        self._reset_observation_buffer() # Reset observation buffer after we moved all objects
+
 
     def get_cell_state(self, position: typing.Dict) -> typing.Dict[BoardState, object]:
         """
@@ -152,8 +170,9 @@ class Board:
         # -edit: I think using the state cache it will be fast enough.
 
         # Check cache
-        if position in self.observation_buffer:
-            return self.observation_buffer[position]
+        p = (position["x"], position["y"])
+        if p in self.observation_buffer:
+            return self.observation_buffer[p]
         
         if position['x'] < 0 or position['x'] == self.width:
             return None
@@ -178,22 +197,37 @@ class Board:
             state[BoardState.free] = True
 
         # Save cache
-        self.observation_buffer[position] = state
+        self.observation_buffer[p] = state
 
         return state
 
-    def get_snake(self, snake_id: str) -> typing.Dict:
-        """Returns a snake object (dict) given snake id"""
+    def get_snake(self, snake_id: str) -> (typing.Dict, bool):
+        """Returns a snake object (dict) given snake id and a boolean is_alive"""
         if snake_id in self.snake_lookup:
-            return self.snakes[self.snake_lookup[snake_id]]
+            return self.snakes[self.snake_lookup[snake_id]], True
+        elif snake_id in self.dead_snakes:
+            return self.dead_snakes[snake_id], False
 
-        return None
+        return None, None
 
     def is_snake_alive(self, snake_id: str) -> bool:
         """Returns true if snake is alive"""
         return snake_id in self.snake_lookup
+    
+    def is_valid_action(self, snake_id:str, action: Action):
+        snake, _ = self.get_snake(snake_id)
+        next_pos = self._get_next_head(snake["head"], action)
 
-    def get_snake_kills(self, snake_id: str) -> str:
+        # Make sure its not in itself
+        if not next_pos in snake["body"]:
+            # Make sure its inside the bounds
+            if next_pos['x'] >= 0 and next_pos['x'] < self.width and next_pos['y'] >= 0 and next_pos['y'] < self.height:
+                return True
+
+        return False
+    
+
+    def get_snake_killer(self, snake_id: str) -> str:
         """Returns the killer of the snake"""
         if snake_id in self.who_killed_who:
             return self.who_killed_who[snake_id]
@@ -231,23 +265,26 @@ class Board:
                     data[x,y,2] = 0.5
 
         # Transpose the matrix
-        transposed_matrix = np.transpose(data, axes=(1, 0, 2))
+        data = np.transpose(data, axes=(1, 0, 2))
 
-        return transposed_matrix
+        return data
+    
+    def copy(self):
+        return copy.deepcopy(self)
 
     def _reset_observation_buffer(self):
-        self.observation_buffer.clear()
+        self.observation_buffer = dict()
 
-    def _check_collision(self, snake: typing.Dict, other_snake: typing.Dict) -> bool:
-        """returns true if snake won"""
+    def _check_collision(self, snake: typing.Dict, other_snake: typing.Dict) -> Collision:
+        """returns collision event"""
 
         if snake['length'] > other_snake['length']:
-            return True
+            return Collision.won
         elif snake['length'] < other_snake['length']:
-            return False
+            return Collision.lost
 
         # Else they're equal lenght and both die
-        return True
+        return Collision.draw
 
     def _get_next_head(self, head: typing.Dict, move: Action) -> typing.Dict:
         if move == Action.up:
