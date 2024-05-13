@@ -33,7 +33,7 @@ class Heuristic:
 
         if closest_food_distance is not None:
             if closest_food_distance == 0:
-                closest_enemy_distance = 0.5
+                closest_food_distance = 0.5
 
             score += self.weights["food_distance"] * 1/closest_food_distance
 
@@ -59,7 +59,7 @@ class Heuristic:
 
         # Are we alive? :O
         is_alive = board.is_snake_alive(my_snake)
-        score += self.weights["death"] * int(is_alive)
+        score += self.weights["death"] * int(not is_alive)
 
         # Did we kill enemies?
         killed_enemies = self.calculate_killed_snakes(board, my_snake, enemy_snakes)
@@ -110,6 +110,9 @@ class Heuristic:
         m_snake_head = m_snake["head"]
         
         for o in other_snakes:
+            if o == my_snake:
+                continue
+
             o_snake, _ = board.get_snake(o)
             dists = {}
             for pos in o_snake["body"]:

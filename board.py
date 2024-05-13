@@ -69,7 +69,7 @@ class Board:
             if (self.print_logs):
                 print(killer_snake["id"], " killed, ", killed_snake["id"], ", reason: ", reason)
         except Exception:
-            print("Couldnt kill snake: ", killed_snake)
+            print("Couldnt kill snake: ", killed_snake["id"])
 
         self.who_killed_who[killed_snake["id"]] = killer_snake["id"]
         self.dead_snakes[killed_snake["id"]] = killed_snake

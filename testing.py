@@ -135,12 +135,34 @@ if __name__ == "__main__":
     
     manual_control = False
     fps = 3
-    max_depth = 6
+    max_depth = 1
 
     manual_snake = s1
     heuristic = Heuristic(weights)
     
     boardState = Board(b_example, max_health=100, hazard_decay=2, step_decay=1, print_logs=True) # temp
+    """
+    my_snake = "id1"
+
+    # delete below
+    friendly_snakes = []
+    enemy_snakes = []
+
+    # If my_snake is dead then m_snake will be None
+    m_snake, my_snake_alive = boardState.get_snake(my_snake)
+
+    for snake in boardState.snakes:
+        if snake["name"] != m_snake["name"]:
+            enemy_snakes.append(snake["id"])
+        elif snake['id'] != m_snake['id']:
+            friendly_snakes.append(snake['id'])
+
+    print("f: ", friendly_snakes)
+    print("e: ", enemy_snakes)
+    score = heuristic.get_score(boardState, my_snake="id4", friendly_snakes=enemy_snakes, enemy_snakes=friendly_snakes)
+    print(score)
+
+    exit(1)"""
   
     # Scale factor for rendering the image larger
     SCALE_FACTOR = 30

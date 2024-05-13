@@ -42,23 +42,12 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
     friendly_snakes, enemy_snakes, my_snake_alive = get_other_snakes(init_board, my_snake)
 
     all_friendly = friendly_snakes + [my_snake]
-    actions = [[Action.up, Action.down, Action.left, Action.right] for i in range(len(all_friendly))]
-    action_combos = list(itertools.product(*actions))
-
-    valid_action_combos = []
-    for action_combo in action_combos:
-        invalid = False
-        for i, snake in enumerate(all_friendly):
-            if not init_board.is_valid_action(snake, action_combo[i]): ## if no actions are valid we need to return something too
-                invalid = True
-                break
-        
-        if not invalid:
-            valid_action_combos.append(action_combo)
+    action_combos = get_children(init_board, all_friendly)
 
     highest_score = -math.inf
     best_actions = None
-    for action_combo in valid_action_combos:
+    #print(my_snake)
+    for action_combo in action_combos:
         new_board = init_board.copy()
 
         actions = { k: action_combo[i] for i, k in enumerate(all_friendly) }
@@ -101,9 +90,8 @@ def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time:
         score = -math.inf
 
         all_friendly = friendly_snakes + [my_snake]
-        actions = [[Action.up, Action.down, Action.left, Action.right] for i in range(len(all_friendly))]
-        action_combos = list(itertools.product(*actions))
-        
+        action_combos = get_children(board, all_friendly)
+
         for action_combo in action_combos:
             new_board = board.copy()
 
@@ -118,8 +106,7 @@ def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time:
     else:
         score = math.inf
 
-        actions = [[Action.up, Action.down, Action.left, Action.right] for i in range(len(enemy_snakes))]
-        action_combos = list(itertools.product(*actions))
+        action_combos = get_children(board, enemy_snakes)
 
         for action_combo in action_combos:
             new_board = board.copy()
@@ -132,6 +119,22 @@ def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time:
             new_board.move_snakes(actions)
             return min(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, True))
      
+def get_children(board: Board, snakes: typing.List[str]):
+    actions = [[Action.up, Action.down, Action.left, Action.right] for i in range(len(snakes))]
+    action_combos = list(itertools.product(*actions))
+    
+    valid_action_combos = []
+    for action_combo in action_combos:
+        invalid = False
+        for i, snake in enumerate(snakes):
+            if not board.is_valid_action(snake, action_combo[i]): ## if no actions are valid we need to return something too
+                invalid = True
+                break
+        
+        if not invalid:
+            valid_action_combos.append(action_combo)
+
+    return valid_action_combos
      
 def get_other_snakes(board: Board, my_snake: str) -> (typing.List[str], typing.List[str]): # type: ignore
     """
