@@ -241,7 +241,7 @@ class Board:
 
         return state
 
-    def get_snake(self, snake_id: str) -> (typing.Dict, bool):
+    def get_snake(self, snake_id: str) -> (typing.Dict, bool): # type: ignore
         """Returns a snake object (dict) given snake id and a boolean is_alive"""
         if snake_id in self.snake_lookup:
             return self.snakes[self.snake_lookup[snake_id]], True
