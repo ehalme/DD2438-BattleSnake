@@ -14,6 +14,7 @@ import typing
 
 from minimax import start_minimax
 from heuristics import Heuristic
+from weights import weights
 
 
 # info is called when you create your Battlesnake on play.battlesnake.com
@@ -45,15 +46,6 @@ def end(game_state: typing.Dict):
 # Valid moves are "up", "down", "left", or "right"
 # See https://docs.battlesnake.com/api/example-move for available data
 def move(game_state: typing.Dict) -> typing.Dict:
-    weights = {
-            "food_distance": 1,
-            "enemy_distance": -0.5,
-            "friendly_distance": 0,
-            "death": -1000,
-            "enemy_killed": 10,
-            "friendly_killed": -10,
-            "health": 0.02,
-        }
     max_depth = 100
     
     heuristic = Heuristic(weights)

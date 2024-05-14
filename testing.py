@@ -5,17 +5,19 @@ import math
 from board import Board, Action
 from minimax import start_minimax
 from heuristics import Heuristic
+from weights import weights
+from multiprocessing.pool import ThreadPool
+from tree_visualizer import get_colour_name
 
 def numpy_array_to_surface(array):
     # Flip the array along the y-axis before creating the surface
     flipped_array = np.flipud(array)
     return pygame.surfarray.make_surface(flipped_array.swapaxes(0, 1))
 
-
 if __name__ == "__main__":   
     s1 = {
-            "id": "id1",
-            "m": 0,
+            "id": "id0",
+            "m": 50,
             "name": "Sneky McSnek Face1",
             "health": 54,
             "body": [
@@ -36,8 +38,8 @@ if __name__ == "__main__":
         }
 
     s2 = {
-            "id": "id2",
-            "m": 1,
+            "id": "id1",
+            "m": 120,
             "name": "Sneky McSnek Face1",
             "health": 54,
             "body": [
@@ -58,9 +60,9 @@ if __name__ == "__main__":
         }
 
     s3 = {
-            "id": "id3",
+            "id": "id2",
             "name": "Sneky McSnek Face2",
-            "m": 2,
+            "m": 160,
             "health": 54,
             "body": [
                 {"x": 5, "y": 1},
@@ -80,9 +82,9 @@ if __name__ == "__main__":
         }
     
     s4 = {
-            "id": "id4",
-            "name": "Sneky McSnek Face3",
-            "m": 2,
+            "id": "id3",
+            "name": "Sneky McSnek Face2",
+            "m": 200,
             "health": 54,
             "body": [
                 {"x": 6, "y": 8},
@@ -123,47 +125,15 @@ if __name__ == "__main__":
         "board": b_example,
         "you": s1,
     }
-
-    weights = {
-            "food_distance": 1,
-            "enemy_distance": -0.5,
-            "friendly_distance": 0,
-            "death": -1000,
-            "enemy_killed": 1,
-            "friendly_killed": -1,
-            "health": 0.01,
-        }
     
     manual_control = False
-    fps = 3
-    max_depth = 1
+    fps = 2
+    max_depth = 5
 
     manual_snake = s1
     heuristic = Heuristic(weights)
     
     boardState = Board(b_example, max_health=100, hazard_decay=2, step_decay=1, print_logs=True) # temp
-    """
-    my_snake = "id1"
-
-    # delete below
-    friendly_snakes = []
-    enemy_snakes = []
-
-    # If my_snake is dead then m_snake will be None
-    m_snake, my_snake_alive = boardState.get_snake(my_snake)
-
-    for snake in boardState.snakes:
-        if snake["name"] != m_snake["name"]:
-            enemy_snakes.append(snake["id"])
-        elif snake['id'] != m_snake['id']:
-            friendly_snakes.append(snake['id'])
-
-    print("f: ", friendly_snakes)
-    print("e: ", enemy_snakes)
-    score = heuristic.get_score(boardState, my_snake="id4", friendly_snakes=enemy_snakes, enemy_snakes=friendly_snakes)
-    print(score)
-
-    exit(1)"""
   
     # Scale factor for rendering the image larger
     SCALE_FACTOR = 30
@@ -171,17 +141,26 @@ if __name__ == "__main__":
     # Initialize Pygame
     pygame.init()
     screen_width = b_example["width"] * SCALE_FACTOR
-    screen_height = b_example["height"] * SCALE_FACTOR
+    screen_height = b_example["height"] * SCALE_FACTOR + 50
+    image_width = b_example["width"] * SCALE_FACTOR
+    image_height = b_example["height"] * SCALE_FACTOR
     screen = pygame.display.set_mode((screen_width, screen_height))
     pygame.display.set_caption("Image Rendering")
+    pygame.font.init()
+    my_font = pygame.font.SysFont('Comic Sans MS', 15)
 
-    # Load your numpy array as an image
-    # Assuming img_array is your numpy array
-    
+    # Get teams
+    teams = dict()
+    for snake in game_state["board"]["snakes"]:
+        color_name = get_colour_name(boardState._get_unique_color(snake["m"]))
+        if snake["name"] in teams:
+            teams[snake["name"]].append(color_name + ", ")
+        else:
+            teams[snake["name"]] = [color_name + ", ", ]
 
     # Main loop
-    running = True
-    last_update = time.time() + 0.25
+    running = True 
+    last_update = time.time_ns() + 0.25*1e9 # wait 0.25 seconds before starting
     manual_action = None
     actions = dict()
     action_manual = Action.up
@@ -200,12 +179,12 @@ if __name__ == "__main__":
                 elif event.key == pygame.K_a:
                     action_manual = Action.left                    
 
-        if time.time() - last_update > 1/fps:
+        if time.time_ns() - last_update > 1/fps*1e9:
             json_board = boardState.get_json_board()
-            for snake in boardState.snakes:
+            def update_snake(snake):
                 if manual_control and snake["id"] == manual_snake["id"]:
                     actions[manual_snake["id"]] = action_manual
-                    continue
+                    return
 
                 game_state = {
                     "game": {"timeout": 500, },
@@ -216,19 +195,34 @@ if __name__ == "__main__":
                 action = start_minimax(game_state, heuristic, max_depth=max_depth, max_health=100, hazard_decay=0, step_decay=1)
                 actions[snake["id"]] = action
                 #actions = {'totally-unique-snake-id1': Action.up, 'totally-unique-snake-id2': Action.up, 'totally-unique-snake-id3': Action.down}
+ 
+            with ThreadPool(len(boardState.snakes)) as p: # process all snakes at the same time
+                p.map(update_snake, boardState.snakes)
             
             boardState.move_snakes(actions)
-            last_update = time.time()
+            last_update = time.time_ns()
             
                     
         img = boardState.get_board_img()
         img_surface = numpy_array_to_surface(img)
 
         # Scale up the image surface
-        scaled_img_surface = pygame.transform.scale(img_surface, (screen_width, screen_height))
+        scaled_img_surface = pygame.transform.scale(img_surface, (image_width, image_height))
 
         # Blit the scaled image onto the screen
         screen.blit(scaled_img_surface, (0, 0))
+
+        # Write teams to screen
+        tm = ""
+        for i, team in enumerate(teams):
+            tm += f"Team {i}: "
+            for color in teams[team]:
+                tm += color
+            tm = tm[:-2]
+            tm += " | "
+        tm = tm[:-3]
+        teams_surface = my_font.render(tm, False, (255, 255, 255))
+        screen.blit(teams_surface, (25,screen_height-25))
 
         # Update the display
         pygame.display.flip()

@@ -58,7 +58,8 @@ class Board:
             self.foods.remove(pos)
             snake['health'] = self.max_health
         except Exception:
-            print("Could not eat food at position: ", pos, ", snake: ", snake)
+            if self.print_logs:
+                print("Could not eat food at position: ", pos, ", snake: ", snake["id"])
 
     def kill_snake(self, killer_snake: typing.Dict, killed_snake: typing.Dict, reason: str) -> None:
         """Removes the snake from the board"""
@@ -69,7 +70,8 @@ class Board:
             if (self.print_logs):
                 print(killer_snake["id"], " killed, ", killed_snake["id"], ", reason: ", reason)
         except Exception:
-            print("Couldnt kill snake: ", killed_snake["id"])
+            if self.print_logs:
+                print("Couldnt kill snake: ", killed_snake["id"])
 
         self.who_killed_who[killed_snake["id"]] = killer_snake["id"]
         self.dead_snakes[killed_snake["id"]] = killed_snake
@@ -127,7 +129,6 @@ class Board:
         for snake, next_head in snakes_to_eat:
             # If we ate food, we just need to move the head
             # since the new body piece will spawn at the tail
-            snake['length'] += 1
             # Move the snake
             snake['head'] = next_head
             snake['body'].insert(0, next_head)
@@ -184,6 +185,10 @@ class Board:
         # Kill off the snakes
         for killer, killed, reason in snakes_to_kill:
             self.kill_snake(killer, killed, reason)
+
+        # Increase length of snakes that ate
+        for snake, next_head in snakes_to_eat:
+            snake['length'] += 1
 
         self._reset_observation_buffer() # Reset observation buffer after we moved all objects
 
@@ -289,9 +294,15 @@ class Board:
         for x in range(self.width):
             for y in range(self.height):
                 if BoardState.snake_body in board[x][y]:
-                    data[x,y,board[x][y][BoardState.snake_body][0]["m"]] = 0.8 * 255
+                    color = self._get_unique_color(board[x][y][BoardState.snake_body][0]["m"])
+                    data[x,y,0] = color[0] * 0.8
+                    data[x,y,1] = color[1] * 0.8
+                    data[x,y,2] = color[2] * 0.8
                 elif BoardState.snake_head in board[x][y]:
-                    data[x,y,board[x][y][BoardState.snake_head][0]["m"]] = 1 * 255
+                    color = self._get_unique_color(board[x][y][BoardState.snake_head][0]["m"])
+                    data[x,y,0] = color[0]
+                    data[x,y,1] = color[1]
+                    data[x,y,2] = color[2]
                 elif BoardState.food in board[x][y]:
                     data[x,y,1] = 1 * 255
                     data[x,y,0] = 1 * 255
@@ -303,6 +314,32 @@ class Board:
         data = np.transpose(data, axes=(1, 0, 2))
 
         return data
+    
+    def print_board(self):
+        """Prints the current board to the console"""
+        board = self.get_board_matrix()
+
+        snake_color = {self.snakes[i]["id"]: f" {i} " for i in range(len(self.snakes))}
+
+        for x in range(self.width):
+            for y in range(self.height):
+                if BoardState.snake_body in board[x][y]:
+                    board[x][y] = snake_color[board[x][y][BoardState.snake_body][0]["id"]]
+                elif BoardState.snake_head in board[x][y]:
+                    board[x][y] = " H "
+                elif BoardState.food in board[x][y]:
+                    board[x][y] = " F "
+                elif BoardState.hazard in board[x][y]:
+                    board[x][y] = " X "
+                else:
+                    board[x][y] = " - "
+        
+        board = np.transpose(board)
+
+        for x in range(self.height-1,-1,-1):
+            for y in range(self.width):
+                print(board[x][y], end="")
+            print("")
     
     def copy(self):
         return copy.deepcopy(self)
@@ -350,3 +387,15 @@ class Board:
             return BoardState.snake_head
         else:
             return BoardState.snake_body
+        
+    def _get_unique_color(self, value):
+        """Returns a unique color within the range 0-255"""
+        import colorsys
+        max_value=255
+        # Calculate the hue value based on the given number
+        hue = (value / max_value) * 360
+        # Convert HSL to RGB
+        rgb = colorsys.hsv_to_rgb(hue / 360, 1.0, 1.0)
+        # Convert RGB values from floats in the range 0.0 - 1.0 to integers in the range 0 - 255
+        rgb = tuple(int(x * 255) for x in rgb)
+        return rgb

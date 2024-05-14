@@ -47,13 +47,12 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
     highest_score = -math.inf
     best_actions = None
     #print(my_snake)
-    for action_combo in action_combos:
+    for actions in action_combos:
         new_board = init_board.copy()
 
-        actions = { k: action_combo[i] for i, k in enumerate(all_friendly) }
         new_board.move_snakes(actions)
     
-        score = minimax(new_board, my_snake, heuristic, calculation_time, start_time, max_depth, False)
+        score = minimax(new_board, my_snake, heuristic, calculation_time, start_time, max_depth-1, False)
 
         #print("Score: ", score, ", Actions: ", actions)
         
@@ -95,38 +94,41 @@ def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time:
         all_friendly = friendly_snakes + [my_snake]
         action_combos = get_children(board, all_friendly)
 
-        for action_combo in action_combos:
+        for actions in action_combos:
             new_board = board.copy()
 
-            for i, snake in enumerate(all_friendly):
-                if not new_board.is_valid_action(snake, action_combo[i]): ## if no actions are valid we need to return something too
-                    continue
-
-            actions = { k: action_combo[i] for i, k in enumerate(all_friendly) }
             new_board.move_snakes(actions)
-            return max(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, False))
-        
+            score = max(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, False))
+
+        return score        
     else:
         score = math.inf
 
         action_combos = get_children(board, enemy_snakes)
 
-        for action_combo in action_combos:
+        for actions in action_combos:
             new_board = board.copy()
 
-            for i, snake in enumerate(enemy_snakes):
-                if not new_board.is_valid_action(snake, action_combo[i]):
-                    continue
-
-            actions = { k: action_combo[i] for i, k in enumerate(enemy_snakes) }
             new_board.move_snakes(actions)
-            return min(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, True))
+            score = min(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, True))
+        
+        return score
      
 def get_children(board: Board, snakes: typing.List[str]):
-    actions = [[Action.up, Action.down, Action.left, Action.right] for i in range(len(snakes))]
-    action_combos = list(itertools.product(*actions))
+    snake_actions = [Action.up, Action.down, Action.left, Action.right]
+    valid_actions = [[] for i in range(len(snakes))]
     
-    valid_action_combos = []
+    for i, snake in enumerate(snakes):
+        for action in snake_actions:
+            if board.is_valid_action(snake, action): ## if no actions are valid we need to return something too
+                valid_actions[i].append(action)
+    
+    action_combos = list(itertools.product(*valid_actions))
+    action_combos = [{snakes[i]: action for i, action in enumerate(actions)} for actions in action_combos]
+
+    
+    return action_combos
+    
     for action_combo in action_combos:
         invalid = False
         for i, snake in enumerate(snakes):
@@ -135,11 +137,14 @@ def get_children(board: Board, snakes: typing.List[str]):
                 break
         
         if not invalid:
-            valid_action_combos.append(action_combo)
-
-    return valid_action_combos
+            valid_actions = dict()
+            for i, snake in enumerate(snakes):
+                valid_actions[snake] = action_combo[i]
+            children.append(valid_actions)
+    
+    return children
      
-def get_other_snakes(board: Board, my_snake: str) -> (typing.List[str], typing.List[str]): # type: ignore
+def get_other_snakes(board: Board, my_snake: str) -> (typing.List[str], typing.List[str], bool): # type: ignore
     """
     Returns a list of friendly snakes that are not yourself and a list of all enemy snakes.
     Returns id only.
