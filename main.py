@@ -46,7 +46,7 @@ def end(game_state: typing.Dict):
 # Valid moves are "up", "down", "left", or "right"
 # See https://docs.battlesnake.com/api/example-move for available data
 def move(game_state: typing.Dict) -> typing.Dict:
-    max_depth = 100
+    max_depth = 8
     
     heuristic = Heuristic(weights)
 

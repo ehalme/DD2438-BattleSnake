@@ -31,7 +31,7 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
     """
     timeout = game_state["game"]["timeout"]
     latency = int(game_state["you"]["latency"]) if game_state["you"]["latency"] != '' else 100
-    calculation_time = timeout - latency - 50 # 50 ms for padding
+    calculation_time = timeout - latency - 60 # X ms for padding
     calculation_time *= 1e6 # convert ms (10^3) to ns (10^9)
     
     my_snake = game_state['you']['id']
