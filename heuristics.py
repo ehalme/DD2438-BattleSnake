@@ -59,7 +59,8 @@ class Heuristic:
 
         # Are we alive? :O
         my_snake_dict, is_alive = board.get_snake(my_snake)
-        score += self.weights["death"] * int(not is_alive)
+        if is_alive is not None:
+            score += self.weights["death"] * int(not is_alive)
 
         # Did we kill enemies?
         killed_enemies = self.calculate_killed_snakes(board, my_snake, enemy_snakes)
@@ -70,8 +71,9 @@ class Heuristic:
         score += self.weights["friendly_killed"] * killed_friendly 
 
         # Health reward
-        current_health = my_snake_dict["health"]
-        score += self.weights["health"] * current_health 
+        if my_snake_dict is not None:
+            current_health = my_snake_dict["health"]
+            score += self.weights["health"] * current_health 
     
         return score
 

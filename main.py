@@ -50,14 +50,15 @@ def move(game_state: typing.Dict) -> typing.Dict:
             "enemy_distance": -0.5,
             "friendly_distance": 0,
             "death": -1000,
-            "enemy_killed": 1,
-            "friendly_killed": -1,
-            "health": 0.01,
+            "enemy_killed": 10,
+            "friendly_killed": -10,
+            "health": 0.02,
         }
+    max_depth = 100
     
     heuristic = Heuristic(weights)
 
-    next_move = start_minimax(game_state, heuristic, 5, 100, 0, 1).name
+    next_move = start_minimax(game_state, heuristic, max_depth, 100, 0, 1).name
 
     return {"move": next_move}
 

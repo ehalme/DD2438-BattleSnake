@@ -30,14 +30,14 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
     Return an Action
     """
     timeout = game_state["game"]["timeout"]
-    latency = game_state["you"]["latency"]
+    latency = int(game_state["you"]["latency"]) if game_state["you"]["latency"] != '' else 100
     calculation_time = timeout - latency - 50 # 50 ms for padding
     calculation_time *= 1e6 # convert ms (10^3) to ns (10^9)
     
     my_snake = game_state['you']['id']
     init_board = Board(game_state["board"], max_health=max_health, hazard_decay=hazard_decay, step_decay=step_decay)
 
-    start_time = time.perf_counter_ns()
+    start_time = time.time_ns()
 
     friendly_snakes, enemy_snakes, my_snake_alive = get_other_snakes(init_board, my_snake)
 
@@ -53,7 +53,7 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
         actions = { k: action_combo[i] for i, k in enumerate(all_friendly) }
         new_board.move_snakes(actions)
     
-        score = minimax(new_board, my_snake, heuristic, start_time, start_time, max_depth, False)
+        score = minimax(new_board, my_snake, heuristic, calculation_time, start_time, max_depth, False)
 
         #print("Score: ", score, ", Actions: ", actions)
         
@@ -61,8 +61,11 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
             highest_score = score
             best_actions = actions
 
-    #print("Minimax time: ", (time.perf_counter_ns() - start_time) / 1e6)
+    print("Minimax time: ", (time.time_ns() - start_time) * 1e-6)
 
+    if best_actions is None:
+        return Action.up
+    
     return best_actions[my_snake]
 
     # start the minimax alg from init_board
@@ -76,11 +79,11 @@ def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time:
     lose = not my_snake_alive # len(friendly_snakes) == 0 and # removing this makes the simulation asymmetric but makes other things easier
     # might want to simulate after the snake is dead too
 
-    used_time = time.perf_counter_ns() - start_time
-    time_limit_exceeded = used_time < calculation_time
+    used_time = time.time_ns() - start_time
+    time_limit_exceeded = used_time > calculation_time
     
     if win or lose or depth == 0 or time_limit_exceeded:
-        #  print("depth:", depth)
+        #print("depth:", depth, ", time limit: ", time_limit_exceeded, ", win: ", win, ", lose: ", lose, ", used_time: ", used_time)
         if maximizing:
             return heuristic.get_score(board, my_snake, friendly_snakes, enemy_snakes)
         else:
