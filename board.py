@@ -241,7 +241,7 @@ class Board:
 
         return state
 
-    def get_snake(self, snake_id: str) -> (typing.Dict, bool): # type: ignore
+    def get_snake(self, snake_id: str) -> typing.Tuple[typing.Dict, bool]:
         """Returns a snake object (dict) given snake id and a boolean is_alive"""
         if snake_id in self.snake_lookup:
             return self.snakes[self.snake_lookup[snake_id]], True
@@ -286,7 +286,7 @@ class Board:
 
         return board
 
-    def get_board_img(self):
+    def get_board_img(self, background_color=(0,0,0)) -> typing.List[typing.List[typing.List]]:
         """Returns an RGB image representation of the board"""
         board = self.get_board_matrix()
         data = np.zeros((self.width, self.height, 3), dtype=np.float32)
@@ -309,6 +309,8 @@ class Board:
                 elif BoardState.hazard in board[x][y]:
                     data[x,y,0] = 0.5 * 255
                     data[x,y,2] = 0.5 * 255
+                else:
+                    data[x,y,:] = background_color
 
         # Transpose the matrix
         data = np.transpose(data, axes=(1, 0, 2))
@@ -344,7 +346,7 @@ class Board:
     def copy(self):
         return copy.deepcopy(self)
     
-    def get_json_board(self):
+    def get_json_board(self) -> typing.Dict:
         data = {
                 "height": self.height,
                 "width": self.width,
@@ -388,7 +390,7 @@ class Board:
         else:
             return BoardState.snake_body
         
-    def _get_unique_color(self, value):
+    def _get_unique_color(self, value) -> typing.Tuple[float,float,float]:
         """Returns a unique color within the range 0-255"""
         import colorsys
         max_value=255

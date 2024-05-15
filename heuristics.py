@@ -77,7 +77,7 @@ class Heuristic:
     
         return score
 
-    def calculate_killed_snakes(self, board: Board, my_snake: str, other_snakes: typing.List[str]):
+    def calculate_killed_snakes(self, board: Board, my_snake: str, other_snakes: typing.List[str]) -> int:
         if other_snakes is None or len(other_snakes) < 1:
             return 0
         
@@ -106,7 +106,7 @@ class Heuristic:
         
         return distances
 
-    def calculate_distance_to_snakes(self, board: Board, my_snake: str, other_snakes: typing.List[str]):
+    def calculate_distance_to_snakes(self, board: Board, my_snake: str, other_snakes: typing.List[str]) -> typing.Dict[typing.Tuple[int,int], float]:
         if other_snakes is None or len(other_snakes) < 1:
             return None
             
@@ -129,11 +129,8 @@ class Heuristic:
             distances[closest_point] = closest_distance
 
         return distances
-        
-    def get_heat_map(self):
-        pass
     
-    def find_closest_point(self, distances: typing.Dict) -> (typing.Dict, float):
+    def find_closest_point(self, distances: typing.Dict) -> typing.Tuple[typing.Dict, float]:
         """
         Returns the closest point in the given distance dictionary.
         distances has the strucutre: 

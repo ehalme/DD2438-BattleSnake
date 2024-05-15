@@ -1,3 +1,4 @@
+import copy
 import time
 import numpy as np
 import pygame 
@@ -8,6 +9,8 @@ from minimax import get_children, get_other_snakes
 from heuristics import Heuristic
 from weights import weights
 import webcolors
+
+"""This is a really hacky and poorly written visualizer of our minimax algorithm"""
 
 def closest_colour(requested_colour):
     min_colours = {}
@@ -63,14 +66,14 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
 
         new_board.move_snakes(actions)
     
-        score = minimax(new_board, my_snake, heuristic, calculation_time, start_time, max_depth-1, False, 1+0.1*(i+1))
+        score = minimax(new_board, my_snake, heuristic, calculation_time, start_time, max_depth-1, False, 1+0.001*(i+1))
 
         #print("Score: ", score, ", Actions: ", actions)
         
         if (max_depth) in images:
-            images[max_depth].append((actions, score, new_board.get_board_img(), 0, 1+0.1*(i+1)))
+            images[max_depth].append((actions, score, new_board.get_board_img(snake_background_color), 0, 1+0.001*(i+1)))
         else:
-            images[max_depth] = [(actions, score, new_board.get_board_img(), 0, 1+0.1*(i+1)),]
+            images[max_depth] = [(actions, score, new_board.get_board_img(snake_background_color), 0, 1+0.001*(i+1)),]
 
         if score > highest_score:
             highest_score = score
@@ -116,9 +119,9 @@ def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time:
             new_board.move_snakes(actions)
             score = max(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, False, parent+1+0.001*(i+1)))
             if (depth) in images:
-                images[depth].append((actions, score, new_board.get_board_img(), parent, parent+1+0.001*(i+1)))
+                images[depth].append((actions, score, new_board.get_board_img(snake_background_color), parent, parent+1+0.001*(i+1)))
             else:
-                images[depth] = [(actions, score, new_board.get_board_img(), parent, parent+1+0.001*(i+1)),]
+                images[depth] = [(actions, score, new_board.get_board_img(snake_background_color), parent, parent+1+0.001*(i+1)),]
         
         return score
         
@@ -131,11 +134,11 @@ def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time:
             new_board = board.copy()
 
             new_board.move_snakes(actions)
-            score = min(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, True, parent+1+0.001*(i+1)))
+            score = min(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, True, parent+1+0.00001*(i+1)))
             if (depth) in images:
-                images[depth].append((actions, score, new_board.get_board_img(), parent, parent+1+0.001*(i+1)))
+                images[depth].append((actions, score, new_board.get_board_img(snake_background_color), parent, parent+1+0.00001*(i+1)))
             else:
-                images[depth] = [(actions, score, new_board.get_board_img(), parent, parent+1+0.001*(i+1)),]
+                images[depth] = [(actions, score, new_board.get_board_img(snake_background_color), parent, parent+1+0.00001*(i+1)),]
         
         return score
 
@@ -251,37 +254,73 @@ if __name__ == "__main__":
         "you": s1,
     }
     
-    manual_control = False
-    max_depth = 2
+    # Screen size
+    screen_width = 1500
+    screen_height = 1000
+    # Scale factor for rendering the image larger (game snapshots)
+    SCALE_FACTOR = 5
+    # Depth to run minimax
+    max_depth = 3
+    # Split images from the same depth into multiple rows
+    split_depths = False
+    # How often to draw
+    fps = 60
+    # Line between node opacity (0-255)
+    line_opacity = 255
+    # Tree separations
+    image_x_separation = 60
+    image_y_separation = 100 
+    text_y_separation = 15
+    # Font size
+    font_size = 12
+    # Set to true creates a black background
+    invert_colors = False
+    # Display which graph is drawn on, increase for larger depths (max ~50_000). Zooming in is slow on large images
+    large_width = 10_000
+    large_height = 10_000
 
-    manual_snake = s1
+
+    ####################################################################################################################
+    snake_background_color = (255,255,255) if invert_colors else (0,0,0)
+
     heuristic = Heuristic(weights)
     
     boardState = Board(b_example, max_health=100, hazard_decay=2, step_decay=1, print_logs=True) # temp
-    initial_node_im = boardState.get_board_img()
-  
-    # Scale factor for rendering the image larger
-    SCALE_FACTOR = 10
+    initial_node_im = boardState.get_board_img(snake_background_color)
 
     # Initialize Pygame
     pygame.init()
     image_width = b_example["width"] * SCALE_FACTOR
     image_height = b_example["height"] * SCALE_FACTOR
-    screen_width = 1500
-    screen_height = 1000
-    screen = pygame.display.set_mode((screen_width, screen_height))
+    screen = pygame.display.set_mode((screen_width, screen_height), pygame.HWSURFACE)
     pygame.display.set_caption("Image Rendering")
     pygame.font.init()
-    my_font = pygame.font.SysFont('Comic Sans MS', 10)
+    my_font = pygame.font.SysFont('Comic Sans MS', font_size)
+
+    # Large surface to render tree on
+    large_surface = pygame.Surface((large_width, large_height), pygame.SRCALPHA | pygame.HWSURFACE)
+
+    # Surface to draw lines on
+    #line_surface = pygame.Surface(large_surface.get_size(), pygame.SRCALPHA)
+
+    # Initialize variables for panning
+    zoom_scale = 0.4
+    starting_y = 1000
+    view_x = -large_width/2 * zoom_scale + screen_width/2
+    view_y = -starting_y * zoom_scale + 80
+    is_panning = False
+    pan_start = (0, 0)
 
     action = start_minimax(game_state, heuristic, max_depth=max_depth, max_health=100, hazard_decay=0, step_decay=1)
     print("Best action: ", action.name)
 
     # images = (actions, score, new_board.get_board_img(), parent, self)
+    total_number_of_images = 1 # we insert top node later
     ims = [[] for i in range(len(images))]
     for depth in images:
         for img in images[depth]:
             ims[(max_depth) - depth].append(img)
+            total_number_of_images += 1
 
     ims.insert(0,[([], 0, initial_node_im, -1, 0),])
 
@@ -295,19 +334,43 @@ if __name__ == "__main__":
     # Main loop
     running = True
     drawn = False
+    clock = pygame.time.Clock()
+    last_zoom = 0
+    scaled_image = None
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False            
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # Left mouse button
+                    is_panning = True
+                    pan_start = event.pos
+                elif event.button == 4:  # Scroll up for zoom in
+                    zoom_scale *= 1.1
+                    view_x -= (screen_width / 2 - view_x) * 0.1
+                    view_y -= (screen_height / 2 - view_y) * 0.1
+                elif event.button == 5:  # Scroll down for zoom out
+                    zoom_scale /= 1.1
+                    # Ensure the scale factor doesn't go too small
+                    zoom_scale = max(0.1, zoom_scale)
+                    # Adjust the view position to zoom out from the center of the screen
+                    if zoom_scale != 0.1:
+                        view_x += (screen_width / 2 - view_x) * (1-1/1.1)
+                        view_y += (screen_height / 2 - view_y) * (1-1/1.1)
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:  # Left mouse button
+                    is_panning = False
 
         if not drawn:
-            screen.fill((255,255,255))
+            if invert_colors:
+                large_surface.fill((0, 0, 0))
+            else:
+                large_surface.fill((255, 255, 255))
             image_buffer = []
+            line_buffer = []
             depth_offset = 0
-            image_seperation = 40
             image_location = dict()
-            start_color = pygame.Color(255,0,0,100)
-            end_color = pygame.Color(0,255,255,100)
+            groups_drawn = 0
             for depth in range(len(ims)):
                 screen_ims = []
                 screen_scores = []
@@ -336,49 +399,107 @@ if __name__ == "__main__":
                     else:
                         grouped_images[screen_parents[i]]= [(screen_ims[i], screen_scores[i], screen_actions[i], screen_parents[i], screen_self[i]), ]
 
-                for group in grouped_images:
-                    line_color = pygame.Color.lerp(start_color, end_color, (depth+depth_offset)/unique_parents)
+                number_images_drawn = 0
+                for group_id, group in enumerate(grouped_images):
+                    if split_depths:
+                        line_color = (*boardState._get_unique_color((depth+depth_offset+1)/unique_parents * 255), line_opacity)
+                    else:
+                        line_color = (*boardState._get_unique_color((groups_drawn+1)/unique_parents * 255), line_opacity)
+                        groups_drawn += 1
+
                     print("Depth: ", depth, ", Images: ", len(grouped_images[group]))
                     for i, data in enumerate(grouped_images[group]):
                         im, score, actions, parent, slf = data
-                        score_surface = my_font.render("Score: " + str(round(score,2)), True, (0, 0, 0))
-                        data_surface = my_font.render(f'Depth: {depth}, Parent: {round(parent,5)}, ID: {round(slf,5)}', True, (0,0,0))
-                        action_txt = ""
+                        score_surface = my_font.render("Score: " + str(round(score,2)), True, snake_background_color)
+                        depth_surface = my_font.render(f'Depth: {depth}', True, snake_background_color)
+                        parent_surface = my_font.render(f'Parent: {round(parent,5)}', True, snake_background_color) 
+                        id_surface = my_font.render(f'ID: {round(slf,5)}', True, snake_background_color) 
+                        action_surfaces = []
                         for snake_id in actions:
                             _s, _ = boardState.get_snake(snake_id)
                             color_name = get_colour_name(boardState._get_unique_color(_s["m"]))
-                            action_txt += color_name + ": " + actions[snake_id].name + ", "
-                        action_surface = my_font.render(action_txt, True, (0, 0, 0))
+                            action_txt = color_name + ": " + actions[snake_id].name
+                            _surface = my_font.render(action_txt, True, snake_background_color)
+                            action_surfaces.append(_surface)
 
                         # centering + image offset between images
-                        x_diff = (screen_width/2 - len(grouped_images[group]) * (image_width/2 + image_seperation/2)) + i*image_width + (i+0.5)*image_seperation
+                        if split_depths:
+                            x_diff = (large_width/2 - len(grouped_images[group]) * (image_width/2 + image_x_separation/2)) + i*image_width + (i+0.5)*image_x_separation
+                        else:
+                            x_diff = (large_width/2 - len(screen_ims) * (image_width/2 + image_x_separation/2)) + number_images_drawn*image_width + (number_images_drawn+0.5)*image_x_separation
+                            number_images_drawn += 1
                         # depth offset + image offset at depth
-                        im_y_diff = (depth + depth_offset)*image_height + (depth + depth_offset)*80+65
-                        action_y_diff = (depth + depth_offset)*image_height + (depth + depth_offset)*80+15
-                        score_y_diff = (depth + depth_offset)*image_height + (depth + depth_offset)*80+30
-                        data_y_diff = (depth + depth_offset)*image_height + (depth + depth_offset)*80+45
+                        im_y_diff = (depth + depth_offset)*image_height + (depth + depth_offset)*image_y_separation+starting_y
+                        action_y_diffs = []
+                        for j in range(len(action_surfaces)):
+                            action_y_diffs.append(im_y_diff-text_y_separation*(j+1))
+                        score_y_diff = action_y_diffs[-1] - text_y_separation if len(action_y_diffs) > 0 else im_y_diff - text_y_separation
+                        depth_y_diff = score_y_diff-text_y_separation
+                        parent_y_diff = depth_y_diff-text_y_separation
+                        id_y_diff = parent_y_diff-text_y_separation
 
                         image_location[slf] = (x_diff + image_width/2, im_y_diff + image_height/2)
 
                         # Need to draw images above lines
                         image_buffer.append((im, (x_diff, im_y_diff)))
                         image_buffer.append((score_surface, (x_diff, score_y_diff)))
-                        image_buffer.append((action_surface, (x_diff, action_y_diff)))
-                        image_buffer.append((data_surface, (x_diff, data_y_diff)))
+                        for j in range(len(action_surfaces)):
+                            image_buffer.append((action_surfaces[j], (x_diff, action_y_diffs[j])))
+                        image_buffer.append((depth_surface, (x_diff, depth_y_diff)))
+                        image_buffer.append((parent_surface, (x_diff, parent_y_diff)))
+                        image_buffer.append((id_surface, (x_diff, id_y_diff)))
 
-                        if parent >= 0:
-                            line_surf = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
-                            pygame.draw.line(line_surf, line_color, image_location[slf], image_location[parent], 3)
-                            screen.blit(line_surf, (0,0))
+                        if parent >= 0: # Dont draw a line for the top node
+                            start_pos = (x_diff + image_width/2, im_y_diff)
+                            line_buffer.append(((start_pos, image_location[parent]), line_color))
 
-                    if (len(grouped_images) > 1):
-                            depth_offset += 1
+                    if (split_depths): # and len(grouped_images) > 1): # this makes it so that only nodes with multiple parents get split # and (group_id+1) < len(grouped_images)): # This removes the gap between depths
+                        depth_offset += 1
 
             # Update the display
-            for im, pos in image_buffer:
-                screen.blit(im, pos)
+            for line, color in line_buffer:
+                #pygame.draw.line(line_surface, line_color, start_pos, image_location[parent], 3)
+                pygame.draw.lines(large_surface, color, False, line, 3)
+            
+            #large_surface.blit(line_surface, (0,0))
 
-            pygame.display.flip()
+            for im, pos in image_buffer:
+                large_surface.blit(im, pos)
+
+            print("Total images: ", total_number_of_images)
+
             drawn = True
+
+        # Handle panning with mouse
+        if is_panning:
+            mouse_x, mouse_y = pygame.mouse.get_pos()
+            view_x += mouse_x - pan_start[0]
+            view_y += mouse_y - pan_start[1]
+            pan_start = (mouse_x, mouse_y)
+
+        # Ensure the view doesn't go out of bounds
+        view_x = max(-(large_width * zoom_scale - screen_width), min(0, view_x))
+        view_y = max(-(large_height * zoom_scale - screen_height), min(0, view_y))
+
+        # Clear the screen
+        if invert_colors:
+            screen.fill((0, 0, 0))
+        else:
+            screen.fill((255, 255, 255))
+
+        # Render a scaled portion of the larger surface onto the screen based on the current view and scale factor
+        if last_zoom != zoom_scale:
+            last_zoom = zoom_scale
+            scaled_width = int(large_width * zoom_scale)
+            scaled_height = int(large_height * zoom_scale)
+            scaled_image = pygame.transform.scale(large_surface, (scaled_width, scaled_height))
+            screen.blit(scaled_image, (view_x, view_y))
+        else:
+            screen.blit(scaled_image, (view_x, view_y))
+
+        pygame.display.flip()
+
+        # Cap the frame rate to fps
+        clock.tick(fps)
 
     pygame.quit()

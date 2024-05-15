@@ -144,7 +144,7 @@ def get_children(board: Board, snakes: typing.List[str]):
     
     return children
      
-def get_other_snakes(board: Board, my_snake: str) -> (typing.List[str], typing.List[str], bool): # type: ignore
+def get_other_snakes(board: Board, my_snake: str) -> typing.Tuple[typing.List[str], typing.List[str], bool]:
     """
     Returns a list of friendly snakes that are not yourself and a list of all enemy snakes.
     Returns id only.
