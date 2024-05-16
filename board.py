@@ -302,7 +302,7 @@ class Board:
         obs = [0, ] * (self.initial_snake_count + 1)
 
         for snake in self.snakes:
-            s = []
+            s = [snake["health"],]
             for p in snake["body"]:
                 s.append((p["x"], p["y"]))
 
