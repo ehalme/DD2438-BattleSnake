@@ -52,7 +52,7 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
 
         new_board.move_snakes(actions)
     
-        score = minimax(new_board, my_snake, heuristic, calculation_time, start_time, max_depth-1, False)
+        score = minimax(new_board, my_snake, heuristic, calculation_time, start_time, max_depth-1, False, -math.inf, math.inf)
 
         #print("Score: ", score, ", Actions: ", actions)
         
@@ -72,7 +72,7 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
     # used Board.move_snakes() when going depth
     # use heuristic.get_score(board) to get the score of the current game state
 
-def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time: int, start_time: int, depth: int, maximizing: bool) -> float: # TODO: edit object
+def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time: int, start_time: int, depth: int, maximizing: bool, alpha: int, beta: int) -> float: # TODO: edit object
     friendly_snakes, enemy_snakes, my_snake_alive = get_other_snakes(board, my_snake)
     win = len(enemy_snakes) == 0
     lose = not my_snake_alive # len(friendly_snakes) == 0 and # removing this makes the simulation asymmetric but makes other things easier
@@ -98,7 +98,10 @@ def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time:
             new_board = board.copy()
 
             new_board.move_snakes(actions)
-            score = max(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, False))
+            score = max(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, False, alpha, beta))
+            alpha = max(alpha, score)
+            if beta <= alpha:
+                break
 
         return score        
     else:
@@ -110,7 +113,10 @@ def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time:
             new_board = board.copy()
 
             new_board.move_snakes(actions)
-            score = min(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, True))
+            score = min(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, True, alpha, beta))
+            beta = min(beta, score)
+            if beta <= alpha:
+                break;
         
         return score
      
