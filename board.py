@@ -1,3 +1,4 @@
+import random
 import typing
 import numpy as np
 from enum import Enum
@@ -31,23 +32,36 @@ class Board:
 
     TODO: Check if the snake only should decay if the head is in the hazard or of any body part is in the hazard. -edit: will not do decay....
     """    
-    def __init__(self, board: typing.Dict, max_health: int, hazard_decay: int, step_decay: int, print_logs=False):
-        """Disable decay by setting it to a value less than 0"""
-        self.height = board["height"]
-        self.width = board["width"]
-        self.foods = board["food"]
-        self.hazards = board["hazards"]
-        self.snakes = board["snakes"]
+    def __init__(self, board: typing.Dict | None, max_health: int, hazard_decay: int, step_decay: int, food_spawn_chance=0.15, min_food=1, print_logs=False):
+        """
+        Disable decay by setting it to a value less than 0.
+        Randomly initialize the environment by setting board = None
+        """
         self.max_health = max_health
         self.hazard_decay = hazard_decay
         self.step_decay = step_decay
+        self.food_spawn_chance = food_spawn_chance
+        self.min_food = min_food
 
-        self.observation_buffer = dict()
-        self.snake_lookup = {k["id"]: v for v, k in enumerate(self.snakes)} # used to retrieve a specific snake based on id fast
-        self.who_killed_who = dict()
-        self.dead_snakes = dict()
-
+        self.observation_buffer = dict() # Used to create a sparse matrix of the current game state
         self.print_logs = print_logs
+
+        if board is None:
+            self._random_init()
+        else:
+            self.height = board["height"]
+            self.width = board["width"]
+            self.foods = board["food"]
+            self.hazards = board["hazards"]
+            self.snakes = board["snakes"]
+
+        self.snake_lookup = {k["id"]: v for v, k in enumerate(self.snakes)} # used to retrieve a specific snake based on id fast
+        self.who_killed_who = dict() # saves which snake killed which snake, stored as snake_id, snake_id
+        self.dead_snakes = dict() # all the dead snakes, store as snake_id: True
+
+        self.initial_snake_count = len(self.snakes)
+        self.sparse_observation_id_to_row = {k["id"]: v for v, k in enumerate(self.snakes)}
+
 
     def eat_food(self, snake: typing.Dict, pos: typing.Dict) -> None:
         """
@@ -192,6 +206,12 @@ class Board:
 
         self._reset_observation_buffer() # Reset observation buffer after we moved all objects
 
+        # Add food if needed
+        add_food = self._check_food_needing_placement()
+        if add_food > 0:
+            self._place_food_random(add_food)
+            self._reset_observation_buffer() # Reset observation buffer after we moved all objects
+
 
     def get_cell_state(self, position: typing.Dict) -> typing.Dict[BoardState, object]:
         """
@@ -241,6 +261,7 @@ class Board:
 
         return state
 
+
     def get_snake(self, snake_id: str) -> typing.Tuple[typing.Dict, bool]:
         """Returns a snake object (dict) given snake id and a boolean is_alive"""
         if snake_id in self.snake_lookup:
@@ -250,10 +271,12 @@ class Board:
 
         return None, None
 
+
     def is_snake_alive(self, snake_id: str) -> bool:
         """Returns true if snake is alive"""
         return snake_id in self.snake_lookup
     
+
     def is_valid_action(self, snake_id:str, action: Action):
         snake, _ = self.get_snake(snake_id)
         next_pos = self._get_next_head(snake["head"], action)
@@ -273,9 +296,30 @@ class Board:
             return self.who_killed_who[snake_id]
 
         return None
+    
+
+    def get_sparse_observation(self) -> typing.Tuple:
+        obs = [0, ] * (self.initial_snake_count + 1)
+
+        for snake in self.snakes:
+            s = []
+            for p in snake["body"]:
+                s.append((p["x"], p["y"]))
+
+            obs[self.sparse_observation_id_to_row[snake["id"]]] = tuple(s)
+
+        food_pos = []
+        for p in self.foods:
+            food_pos.append((p["x"], p["y"]))
+
+        obs[-1] = tuple(food_pos)
+
+        return tuple(obs)
+
 
     def get_board_matrix(self) -> typing.List[typing.List[typing.Dict[BoardState, object]]]:
         """Returns a 2D matrix representation of the board, origin in top lefthand corner"""
+        self._reset_observation_buffer()
         board = [[0,] * self.height for y in range(self.width)]
         for x in range(self.width):
             for y in range(self.height):
@@ -285,6 +329,7 @@ class Board:
         # it is now origin in top left, rotate to have origin in bottom left
 
         return board
+
 
     def get_board_img(self, background_color=(0,0,0)) -> typing.List[typing.List[typing.List]]:
         """Returns an RGB image representation of the board"""
@@ -317,6 +362,7 @@ class Board:
 
         return data
     
+
     def print_board(self):
         """Prints the current board to the console"""
         board = self.get_board_matrix()
@@ -343,9 +389,11 @@ class Board:
                 print(board[x][y], end="")
             print("")
     
+
     def copy(self):
         return copy.deepcopy(self)
     
+
     def get_json_board(self) -> typing.Dict:
         data = {
                 "height": self.height,
@@ -357,8 +405,10 @@ class Board:
         
         return data
 
+
     def _reset_observation_buffer(self):
         self.observation_buffer = dict()
+
 
     def _check_collision(self, snake: typing.Dict, other_snake: typing.Dict) -> Collision:
         """returns collision event"""
@@ -370,6 +420,7 @@ class Board:
 
         # Else they're equal lenght and both die
         return Collision.draw
+
 
     def _get_next_head(self, head: typing.Dict, move: Action) -> typing.Dict:
         if move == Action.up:
@@ -383,6 +434,7 @@ class Board:
         else:
             print("Undefined action!")
 
+
     def _get_snake_state(self, snake: str, pos: typing.Dict) -> BoardState:
         # Assumes that the position is somewhere in a snake...      
         if snake['head'] == pos:
@@ -390,6 +442,7 @@ class Board:
         else:
             return BoardState.snake_body
         
+
     def _get_unique_color(self, value) -> typing.Tuple[float,float,float]:
         """Returns a unique color within the range 0-255"""
         import colorsys
@@ -401,3 +454,121 @@ class Board:
         # Convert RGB values from floats in the range 0.0 - 1.0 to integers in the range 0 - 255
         rgb = tuple(int(x * 255) for x in rgb)
         return rgb
+    
+
+    def _random_init(self) -> None:
+        self.height = 11
+        self.width = 11
+        self.snakes = self._get_snakes(number_of_snakes=4, snake_start_size=3)
+        self.hazards = []
+        self.foods = []
+        self._place_food_random(len(self.snakes))
+    
+
+    def _place_food_random(self, number_of_food) -> None:
+        free_positions = self._get_free_positions()
+
+        if len(free_positions) < number_of_food:
+            return
+
+        self.foods.extend(random.sample(free_positions, number_of_food))
+    
+
+    def _check_food_needing_placement(self) -> int:
+        num_current_food = len(self.foods)
+
+        if num_current_food < self.min_food:
+            return self.min_food - num_current_food
+        elif self.food_spawn_chance > 0 and random.random() < self.food_spawn_chance:
+            return 1
+        
+        return 0
+
+
+    def _get_free_positions(self) -> typing.List[typing.Dict]:
+        free_positions = []
+        for x in range(self.width):
+            for y in range(self.height):
+                p = {"x": x, "y": y}
+                s = self.get_cell_state(p)
+                if BoardState.free in s:
+                    free_positions.append(p)
+
+        return free_positions
+    
+
+    def _get_snakes(self, number_of_snakes: int, snake_start_size: int) -> typing.List[typing.Dict]:
+        class RandomPositionBucket:
+            """Just a helper class"""
+            def __init__(self):
+                self.positions = []
+
+            def fill(self, *points):
+                for point in points:
+                    self.positions.append(point)
+
+            def take(self):
+                if not self.positions:
+                    raise Exception("No positions left to take")
+                return self.positions.pop(random.randint(0, len(self.positions) - 1))
+            
+        bodies = [[] for i in range(number_of_snakes)]
+
+        quad_h_space = self.width // 2
+        quad_v_space = self.height // 2
+
+        h_offset = quad_h_space // 3
+        v_offset = quad_v_space // 3
+
+        quads = [RandomPositionBucket() for _ in range(4)]
+
+        # quad 1
+        quads[0].fill(
+            (h_offset, v_offset),
+            (quad_h_space - h_offset, v_offset),
+            (h_offset, quad_v_space - v_offset),
+            (quad_h_space - h_offset, quad_v_space - v_offset),
+        )
+
+        # quad 2
+        for p in quads[0].positions:
+            quads[1].fill((self.width - p[0] - 1, p[1]))
+
+        # quad 3
+        for p in quads[0].positions:
+            quads[2].fill((p[0], self.height - p[1] - 1))
+
+        # quad 4
+        for p in quads[0].positions:
+            quads[3].fill((self.width - p[0] - 1, self.height - p[1] - 1))
+
+        current_quad = random.randint(0, 3)  # randomly pick a quadrant to start from
+        # evenly distribute snakes across quadrants, randomly, by rotating through the quadrants
+        for i in range(number_of_snakes):
+            p = quads[current_quad].take()
+            for _ in range(snake_start_size):
+                bodies[i].append({"x": p[0], "y": p[1]})
+            current_quad = (current_quad + 1) % 4
+
+        snakes = [self._create_snake(f"id{i}", i, (i+1)/number_of_snakes * 255, body) for i, body in enumerate(bodies)]
+
+        return snakes
+    
+    def _create_snake(self, snake_id: str, id_number: int, color: int, body: typing.List[typing.Dict]):
+        return {
+            "id": snake_id,
+            "m": color,
+            "name": "Sneky McSnek Face " + str(id_number%2),
+            "health": self.max_health,
+            "body": body,
+            "latency": 123,
+            "head": body[0],
+            "length": len(body),
+            "shout": "why are we shouting??",
+            "squad": "1",
+            "customizations":{
+                "color":"#26CF04",
+                "head":"smile",
+                "tail":"bolt"
+            }
+        }
