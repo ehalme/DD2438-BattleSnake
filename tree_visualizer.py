@@ -258,7 +258,7 @@ if __name__ == "__main__":
     screen_width = 1500
     screen_height = 1000
     # Scale factor for rendering the image larger (game snapshots)
-    SCALE_FACTOR = 5
+    SCALE_FACTOR = 10
     # Depth to run minimax
     max_depth = 3
     # Split images from the same depth into multiple rows
