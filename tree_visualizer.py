@@ -31,6 +31,7 @@ def get_colour_name(requested_colour):
     return closest_name
 
 images = dict()
+pruned_branches = 0
 
 def numpy_array_to_surface(array):
     # Flip the array along the y-axis before creating the surface
@@ -66,7 +67,7 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
 
         new_board.move_snakes(actions)
     
-        score = minimax(new_board, my_snake, heuristic, calculation_time, start_time, max_depth-1, False, 1+0.001*(i+1))
+        score = minimax(new_board, my_snake, heuristic, calculation_time, start_time, max_depth-1, False, 1+0.001*(i+1), -math.inf, math.inf)
 
         #print("Score: ", score, ", Actions: ", actions)
         
@@ -91,7 +92,8 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
     # used Board.move_snakes() when going depth
     # use heuristic.get_score(board) to get the score of the current game state
 
-def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time: int, start_time: int, depth: int, maximizing: bool, parent: int) -> float: # TODO: edit object
+def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time: int, start_time: int, depth: int, maximizing: bool, parent: int, alpha: int, beta: int) -> float: # TODO: edit object
+    global pruned_branches
     friendly_snakes, enemy_snakes, my_snake_alive = get_other_snakes(board, my_snake)
     win = len(enemy_snakes) == 0
     lose = not my_snake_alive # len(friendly_snakes) == 0 and # removing this makes the simulation asymmetric but makes other things easier
@@ -117,11 +119,15 @@ def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time:
             new_board = board.copy()
 
             new_board.move_snakes(actions)
-            score = max(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, False, parent+1+0.001*(i+1)))
+            score = max(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, False, parent+1+0.001*(i+1), alpha, beta))
             if (depth) in images:
                 images[depth].append((actions, score, new_board.get_board_img(snake_background_color), parent, parent+1+0.001*(i+1)))
             else:
                 images[depth] = [(actions, score, new_board.get_board_img(snake_background_color), parent, parent+1+0.001*(i+1)),]
+            alpha = max(alpha, score)
+            if beta <= alpha:
+                pruned_branches += len(action_combos) - i - 1
+                break
         
         return score
         
@@ -134,11 +140,15 @@ def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time:
             new_board = board.copy()
 
             new_board.move_snakes(actions)
-            score = min(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, True, parent+1+0.00001*(i+1)))
+            score = min(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, True, parent+1+0.00001*(i+1), alpha, beta))
             if (depth) in images:
                 images[depth].append((actions, score, new_board.get_board_img(snake_background_color), parent, parent+1+0.00001*(i+1)))
             else:
                 images[depth] = [(actions, score, new_board.get_board_img(snake_background_color), parent, parent+1+0.00001*(i+1)),]
+            beta = min(beta, score)
+            if beta <= alpha:
+                pruned_branches += len(action_combos) - i - 1
+                break
         
         return score
 
@@ -260,7 +270,7 @@ if __name__ == "__main__":
     # Scale factor for rendering the image larger (game snapshots)
     SCALE_FACTOR = 10
     # Depth to run minimax
-    max_depth = 3
+    max_depth = 4
     # Split images from the same depth into multiple rows
     split_depths = False
     # How often to draw
@@ -466,7 +476,7 @@ if __name__ == "__main__":
             for im, pos in image_buffer:
                 large_surface.blit(im, pos)
 
-            print("Total images: ", total_number_of_images)
+            print("Total images: ", total_number_of_images, ", Pruned: ", pruned_branches)
 
             drawn = True
 

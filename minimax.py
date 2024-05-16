@@ -116,7 +116,7 @@ def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time:
             score = min(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, True, alpha, beta))
             beta = min(beta, score)
             if beta <= alpha:
-                break;
+                break
         
         return score
      
