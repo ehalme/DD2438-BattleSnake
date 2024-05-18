@@ -209,15 +209,14 @@ class Board:
 
         self._reset_observation_buffer() # Reset observation buffer after we moved all objects
 
+        self.minor_game_step += 0.5
+        self.game_step += int(self.minor_game_step)
+
         # Add food if needed
         add_food = self._check_food_needing_placement()
         if add_food > 0:
             self._place_food_random(add_food)
             self._reset_observation_buffer() # Reset observation buffer after we moved all objects
-
-        self.minor_game_step += 0.5
-        self.game_step += int(self.minor_game_step)
-        #print(self.game_step)
 
 
     def get_cell_state(self, position: typing.Dict) -> typing.Dict[BoardState, object]:
@@ -492,11 +491,11 @@ class Board:
             return
 
         if self.print_logs:
-            pass
-        
+            print("Placing: ", number_of_food, " foods on the board!")        
+
         if self.food_spawn_chances is not None:
             random.seed(self.food_spawn_chances[self.game_step%len(self.food_spawn_chances)])
-
+        
         self.foods.extend(random.sample(free_positions, number_of_food))
     
 
@@ -509,8 +508,9 @@ class Board:
         if num_current_food < self.min_food:
             return self.min_food - num_current_food
 
-        if self.food_spawn_chances is not None and self.food_spawn_chances[self.game_step%len(self.food_spawn_chances)] < self.food_spawn_chance:
-            return 1
+        if self.food_spawn_chances is not None:
+            if self.food_spawn_chances[self.game_step%len(self.food_spawn_chances)] < self.food_spawn_chance:
+                return 1
         elif self.food_spawn_chance > 0 and random.random() < self.food_spawn_chance:
             return 1
         

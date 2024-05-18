@@ -82,8 +82,8 @@ class Heuristic:
         if my_snake_dict["head"] in board.foods:
             score += self.weights["eat_food"]
 
-        reachable_cells = self.flood_fill(board, my_snake)
-        score += self.weights["flood_fill"] * reachable_cells
+        #reachable_cells = self.flood_fill(board, my_snake)
+        #score += self.weights["flood_fill"] * reachable_cells
     
         return score
 
