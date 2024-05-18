@@ -18,6 +18,7 @@ import itertools
 import typing
 import time
 import math
+import numpy as np
 
 from board import Board, Action
 from heuristics import Heuristic
@@ -34,8 +35,9 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
     calculation_time = timeout - latency - 60 # X ms for padding
     calculation_time *= 1e6 # convert ms (10^3) to ns (10^9)
     
+    food_spawn_chances = np.random.rand(20) # Create a vector of random numbers so that every environment spawns food in the same way
     my_snake = game_state['you']['id']
-    init_board = Board(game_state["board"], max_health=max_health, hazard_decay=hazard_decay, step_decay=step_decay)
+    init_board = Board(game_state["board"], max_health=max_health, hazard_decay=hazard_decay, step_decay=step_decay, food_spawn_chances=food_spawn_chances)
 
     start_time = time.time_ns()
 

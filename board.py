@@ -32,15 +32,17 @@ class Board:
 
     TODO: Check if the snake only should decay if the head is in the hazard or of any body part is in the hazard. -edit: will not do decay....
     """    
-    def __init__(self, board: typing.Dict | None, max_health: int, hazard_decay: int, step_decay: int, food_spawn_chance=0.15, min_food=1, print_logs=False):
+    def __init__(self, board: typing.Dict | None, max_health: int, hazard_decay: int, step_decay: int, food_spawn_chance=0.15, min_food=1, food_spawn_chances=None, print_logs=False):
         """
         Disable decay by setting it to a value less than 0.
-        Randomly initialize the environment by setting board = None
+        Randomly initialize the environment by setting board = None.
+        Set the food_spawn_chances to a list of ints in [0-1] so that each environment will use the same food spawn point.
         """
         self.max_health = max_health
         self.hazard_decay = hazard_decay
         self.step_decay = step_decay
         self.food_spawn_chance = food_spawn_chance
+        self.food_spawn_chances = food_spawn_chances
         self.min_food = min_food
 
         self.observation_buffer = dict() # Used to create a sparse matrix of the current game state
@@ -61,6 +63,9 @@ class Board:
 
         self.initial_snake_count = len(self.snakes)
         self.sparse_observation_id_to_row = {k["id"]: v for v, k in enumerate(self.snakes)}
+
+        self.game_step = 0
+        self.minor_game_step = 0 # keep track of how many snakes we move and only update game_step when all snakes have moved
 
 
     def eat_food(self, snake: typing.Dict, pos: typing.Dict) -> None:
@@ -97,9 +102,8 @@ class Board:
         snakes_to_eat = []
         snakes_to_move = []
 
-        for snake in self.snakes:
-            if snake["id"] not in moves:
-                continue
+        for snake_id in moves:
+            snake = self.snakes[self.snake_lookup[snake_id]]
 
             head = snake["head"]
             move = moves[snake["id"]]
@@ -162,9 +166,8 @@ class Board:
 
         # Check if any snakes should be killed off after they moved...
         snakes_to_kill = []
-        for snake in self.snakes:
-            if snake["id"] not in moves:
-                continue
+        for snake_id in moves:
+            snake = self.snakes[self.snake_lookup[snake_id]]
             
             head = snake["head"]
 
@@ -211,6 +214,10 @@ class Board:
         if add_food > 0:
             self._place_food_random(add_food)
             self._reset_observation_buffer() # Reset observation buffer after we moved all objects
+
+        self.minor_game_step += 0.5
+        self.game_step += int(self.minor_game_step)
+        #print(self.game_step)
 
 
     def get_cell_state(self, position: typing.Dict) -> typing.Dict[BoardState, object]:
@@ -280,14 +287,27 @@ class Board:
     def is_valid_action(self, snake_id:str, action: Action):
         snake, _ = self.get_snake(snake_id)
         next_pos = self._get_next_head(snake["head"], action)
+        cell_state = self.get_cell_state(next_pos)
 
-        # Make sure its not in itself
-        if not next_pos in snake["body"]:
-            # Make sure its inside the bounds
-            if next_pos['x'] >= 0 and next_pos['x'] < self.width and next_pos['y'] >= 0 and next_pos['y'] < self.height:
-                return True
+        # Make sure its inside the bounds
+        if cell_state is None:
+            return False
+        
+        # Check if its free
+        if BoardState.free in cell_state:
+            return True
 
-        return False
+        # Make sure its not in itself or another snake
+        # but allow moves that move onto the tail
+        if BoardState.snake_body in cell_state:
+            snakes = cell_state[BoardState.snake_body]
+            for snake in snakes:
+                if snake["body"][-1] != next_pos: # if its not the tail
+                    return False
+                
+        # Allow BoardSate.snake_head
+
+        return True
     
 
     def get_snake_killer(self, snake_id: str) -> str:
@@ -471,14 +491,28 @@ class Board:
         if len(free_positions) < number_of_food:
             return
 
+        if self.print_logs:
+            pass
+        
+        print("Placing: ", number_of_food, " foods on the board!")
+
+        if self.food_spawn_chances is not None:
+            random.seed(self.food_spawn_chances[self.game_step%len(self.food_spawn_chances)])
+
         self.foods.extend(random.sample(free_positions, number_of_food))
     
 
     def _check_food_needing_placement(self) -> int:
+        if self.minor_game_step != self.game_step: # only update on full game steps
+            return 0
+
         num_current_food = len(self.foods)
 
         if num_current_food < self.min_food:
             return self.min_food - num_current_food
+
+        if self.food_spawn_chances is not None and self.food_spawn_chances[self.game_step%len(self.food_spawn_chances)] < self.food_spawn_chance:
+            return 1
         elif self.food_spawn_chance > 0 and random.random() < self.food_spawn_chance:
             return 1
         

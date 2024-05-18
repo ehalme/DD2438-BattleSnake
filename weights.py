@@ -1,5 +1,6 @@
 weights = {
             "food_distance": 1,
+            "eat_food": 1,
             "enemy_distance": -0.5,
             "friendly_distance": 0,
             "death": -1000,
