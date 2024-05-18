@@ -494,8 +494,6 @@ class Board:
         if self.print_logs:
             pass
         
-        print("Placing: ", number_of_food, " foods on the board!")
-
         if self.food_spawn_chances is not None:
             random.seed(self.food_spawn_chances[self.game_step%len(self.food_spawn_chances)])
 

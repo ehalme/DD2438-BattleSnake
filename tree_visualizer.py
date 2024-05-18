@@ -42,6 +42,7 @@ def get_colour_name(requested_colour):
     return closest_name
 
 pruned_branches = 0
+img_ids = 1
 
 def numpy_array_to_surface(array):
     # Flip the array along the y-axis before creating the surface
@@ -54,6 +55,8 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
     specified heuristic.
     Return an Action
     """
+    global img_ids
+
     timeout = game_state["game"]["timeout"]
     latency = int(game_state["you"]["latency"]) if game_state["you"]["latency"] != '' else 100
     calculation_time = timeout - latency - 60 # X ms for padding
@@ -79,19 +82,20 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
     #print(my_snake)
     for depth in range(1,max_depth+1):
         images = list()
-        image_id = 0
 
-        for actions in action_combos:
+        for i, actions in enumerate(action_combos):
             new_board = init_board.copy()
     
             new_board.move_snakes(actions)
-        
-            score = minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth, False, -math.inf, math.inf, transposition_table, image_id, images)
+
+            slf = img_ids
+            img_ids += 1
+
+            score = minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth, False, -math.inf, math.inf, transposition_table, slf, images)
     
             #print("Score: ", score, ", Actions: ", actions)
 
-            images.append(Image(new_board.get_board_img(), depth+1, score, actions, 0, image_id))
-            image_id += 1
+            images.append(Image(new_board.get_board_img(), depth+1, score, actions, 0, slf))
             
             if score > highest_score:
                 highest_score = score
@@ -115,7 +119,8 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
     # used Board.move_snakes() when going depth
     # use heuristic.get_score(board) to get the score of the current game state
 
-def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time: int, start_time: int, depth: int, maximizing: bool, alpha: int, beta: int, transposition_table: typing.Dict, image_id: int, images: list) -> float: # TODO: edit object
+def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time: int, start_time: int, depth: int, maximizing: bool, alpha: int, beta: int, transposition_table: typing.Dict, parent: int, images: list) -> float: # TODO: edit object
+    global pruned_branches, img_ids
     observation = board.get_sparse_observation()
     if observation in transposition_table:
         return transposition_table[observation]
@@ -141,34 +146,42 @@ def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time:
         all_friendly = friendly_snakes + [my_snake]
         action_combos = get_children(board, all_friendly)
 
-        for actions in action_combos:
+        for i, actions in enumerate(action_combos):
             new_board = board.copy()
 
+            slf = img_ids #1 + parent + (i+1)*0.00001
+            img_ids += 1
+
             new_board.move_snakes(actions)
-            score = max(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, False, alpha, beta, transposition_table, image_id+1, images))
+            score = max(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, False, alpha, beta, transposition_table, slf, images))
             alpha = max(alpha, score)
 
-            images.append(Image(new_board.get_board_img(), depth, score, actions, image_id, image_id+1))
+            images.append(Image(new_board.get_board_img(), depth, score, actions, parent, slf))
 
-            if beta <= alpha:
+            if beta <= alpha and not disable_pruning:
                 transposition_table[observation] = score
+                pruned_branches += 1
                 break
     else:
         score = math.inf
 
         action_combos = get_children(board, enemy_snakes)
 
-        for actions in action_combos:
+        for i, actions in enumerate(action_combos):
             new_board = board.copy()
 
+            slf = img_ids #1 + parent + (i+1)*0.001
+            img_ids += 1
+
             new_board.move_snakes(actions)
-            score = min(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, True, alpha, beta, transposition_table, image_id+1, images))
+            score = min(score, minimax(new_board, my_snake, heuristic, calculation_time, start_time, depth - 1, True, alpha, beta, transposition_table, slf, images))
             beta = min(beta, score)
 
-            images.append(Image(new_board.get_board_img(), depth, score, actions, image_id, image_id+1))
+            images.append(Image(new_board.get_board_img(), depth, score, actions, parent, slf))
 
-            if beta <= alpha:
+            if beta <= alpha and not disable_pruning:
                 transposition_table[observation] = score
+                pruned_branches += 1
                 break
 
     #transposition_table[observation] = score
@@ -181,7 +194,7 @@ if __name__ == "__main__":
     # Scale factor for rendering the image larger (game snapshots)
     SCALE_FACTOR = 10
     # Depth to run minimax
-    max_depth = 3
+    max_depth = 4
     # Split images from the same depth into multiple rows
     split_depths = True
     # How often to draw
@@ -201,6 +214,10 @@ if __name__ == "__main__":
     #random.seed(0)
     # Custom game state
     use_predefined_game_state = True
+    # iterative deepening layer (max of max_depth, min of 1)
+    depth_layer = max_depth
+    # disable pruning
+    disable_pruning = False
 
     ####################################################################################################################
     snake_background_color = (0,0,0)
@@ -246,10 +263,14 @@ if __name__ == "__main__":
     action, all_images = start_minimax(game_state, heuristic, max_depth=max_depth, max_health=100, hazard_decay=0, step_decay=1)
     print("Best action: ", action.name)
 
+    t = []
     for depth in all_images:
-        all_images[depth].insert(Image(initial_node_im, 0, 0, {}, -1, 0))
+        for img in all_images[depth]:
+            img.depth = depth - img.depth + 2
+            if img.depth not in t:
+                t.append(img.depth)
 
-    print("Depths: ", all_images.keys())
+        all_images[depth].insert(0, Image(initial_node_im, 0, 0, {}, -1, 0))
 
     # Main loop
     running = True
@@ -283,19 +304,33 @@ if __name__ == "__main__":
 
         if not drawn:
             large_surface.fill((255, 255, 255))
-            image_buffer = []
-            line_buffer = []
             depth_offset = 0
             image_location = dict()
-            groups_drawn = 0
+            total_number_of_images = 0
+            image_buffer = []
+
             #for depth in all_images:
             img_draw_in_depth = dict()
-            for img in all_images[max_depth]:
+            imgs_per_depth = dict()
+            image_location = dict()
+            children_per_parent = dict()
+            # set up dicts
+            for img in all_images[depth_layer]:
+                if img.depth not in imgs_per_depth:
+                    imgs_per_depth[img.depth] = 0
+
+                if img.parent not in children_per_parent:
+                    children_per_parent[img.parent] = 0
+
+                children_per_parent[img.parent] += 1
+                imgs_per_depth[img.depth] += 1
+                img_draw_in_depth[img.depth] = 0
+
+            for img in all_images[depth_layer]:
                 img_surface = numpy_array_to_surface(img.image)
 
                 # Scale up the image surface
                 scaled_img_surface = pygame.transform.scale(img_surface, (image_width, image_height))
-                img.image = scaled_img_surface
 
                 score_surface = my_font.render("Score: " + str(round(img.score,2)), True, snake_background_color)
                 depth_surface = my_font.render(f'Depth: {img.depth}', True, snake_background_color)
@@ -309,24 +344,58 @@ if __name__ == "__main__":
                     _surface = my_font.render(action_txt, True, snake_background_color)
                     action_surfaces.append(_surface)
 
-                if not img.depth in img_draw_in_depth:
-                    img_draw_in_depth[img.depth] = 0
+                x_diff = (large_width/2 - imgs_per_depth[img.depth] * (image_width/2 + image_x_separation/2)) + img_draw_in_depth[img.depth]*image_width + (img_draw_in_depth[img.depth]+0.5)*image_x_separation
+                im_y_diff = (img.depth + depth_offset)*image_height + (img.depth + depth_offset)*image_y_separation+starting_y
+                action_y_diffs = []
+                for j in range(len(action_surfaces)):
+                    action_y_diffs.append(im_y_diff-text_y_separation*(j+1))
+                score_y_diff = action_y_diffs[-1] - text_y_separation if len(action_y_diffs) > 0 else im_y_diff - text_y_separation
+                depth_y_diff = score_y_diff-text_y_separation
+                parent_y_diff = depth_y_diff-text_y_separation
+                id_y_diff = parent_y_diff-text_y_separation
 
-                x_diff = (large_width/2 - len(screen_ims) * (image_width/2 + image_x_separation/2)) + number_images_drawn*image_width + (number_images_drawn+0.5)*image_x_separation
+                image_buffer.append((scaled_img_surface, (x_diff, im_y_diff)))
+                image_buffer.append((score_surface, (x_diff, score_y_diff)))
+                for j in range(len(action_surfaces)):
+                    image_buffer.append((action_surfaces[j], (x_diff, action_y_diffs[j])))
+                image_buffer.append((depth_surface, (x_diff, depth_y_diff)))
+                image_buffer.append((parent_surface, (x_diff, parent_y_diff)))
+                image_buffer.append((id_surface, (x_diff, id_y_diff)))
 
-                
+                image_location[img.slf] = (x_diff + image_width/2, im_y_diff + image_height/2)
+                img_draw_in_depth[img.depth] += 1
+                total_number_of_images += 1
 
-            # Update the display
-            for line, color in line_buffer:
-                #pygame.draw.line(line_surface, line_color, start_pos, image_location[parent], 3)
-                pygame.draw.lines(large_surface, color, False, line, 3)
+            parents_drawn = dict()
+            color_idx = dict()
+            for d in children_per_parent:
+                parents_drawn[d] = 0
+
+            for d in img_draw_in_depth:
+                color_idx[d] = 0
+
+            # lines
+            for img in all_images[depth_layer]:
+                if img.parent != -1: # Dont draw a line for the top node
+                    start_pos = list(image_location[img.slf])
+                    start_pos[1] -= image_height/2
+                    end_pos = list(image_location[img.parent])
+                    end_pos[1] += image_height/2
+                    num_parents = imgs_per_depth[img.depth-1]
+                    line_color = (*boardState._get_unique_color((color_idx[img.depth]+1)/num_parents * 255), line_opacity)
+
+                    parents_drawn[img.parent] += 1
+
+                    if parents_drawn[img.parent] == children_per_parent[img.parent]:
+                        color_idx[img.depth] += 1
+
+                    pygame.draw.line(large_surface, line_color, start_pos, end_pos, 3)
+
+            for img, pos in image_buffer:
+                large_surface.blit(img, pos)
             
-            #large_surface.blit(line_surface, (0,0))
 
-            for im, pos in image_buffer:
-                large_surface.blit(im, pos)
-
-            print("Total images: ", total_number_of_images, ", Pruned: ", pruned_branches, ", Images drawn: ", number_images_drawn)
+            print("Total images: ", total_number_of_images, ", Pruned: ", pruned_branches)
 
             drawn = True
 
