@@ -213,7 +213,7 @@ if __name__ == "__main__":
     # Set seed
     #random.seed(0)
     # Custom game state
-    use_predefined_game_state = True
+    use_predefined_game_state = False
     # iterative deepening layer (max of max_depth, min of 1)
     depth_layer = max_depth
     # disable pruning

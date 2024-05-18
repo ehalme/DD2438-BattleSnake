@@ -175,6 +175,7 @@ class Heuristic:
         for snake in snakes:
             for snake_body in snake["body"]:
                 visited[snake_body["x"]][snake_body["y"]] = True
+        visited[my_snake_head_x][my_snake_head_y] = False
 
         queue = deque([(my_snake_head_x, my_snake_head_y)])
         reachable_cells = 0

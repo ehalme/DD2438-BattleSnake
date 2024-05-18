@@ -48,7 +48,8 @@ if __name__ == "__main__":
             teams[snake["name"]] = [color_name + ", ", ]
 
     # Main loop
-    pool = ThreadPool(len(boardState.snakes))
+    #pool = ThreadPool(len(boardState.snakes))
+    pool = ThreadPool(1)
     running = True 
     clock = pygame.time.Clock()
     manual_action = None

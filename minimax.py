@@ -68,7 +68,7 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
         if used_time >= calculation_time:
             break
 
-    print("Minimax time: ", (time.time_ns() - start_time) * 1e-6)
+    print("Minimax time: ", (time.time_ns() - start_time) * 1e-6, "Depth:", depth)
 
     if best_actions is None:
         return Action.up
