@@ -32,7 +32,7 @@ class Board:
 
     TODO: Check if the snake only should decay if the head is in the hazard or of any body part is in the hazard. -edit: will not do decay....
     """    
-    def __init__(self, board: typing.Dict | None, max_health: int, hazard_decay: int, step_decay: int, food_spawn_chance=0.15, min_food=1, food_spawn_chances=None, print_logs=False):
+    def __init__(self, board: typing.Dict | None, max_health: int, hazard_decay: int, step_decay: int, food_spawn_chance=0.15, min_food=1, food_spawn_chances=None, move_all_snakes=False, print_logs=False):
         """
         Disable decay by setting it to a value less than 0.
         Randomly initialize the environment by setting board = None.
@@ -66,6 +66,7 @@ class Board:
 
         self.game_step = 0
         self.minor_game_step = 0 # keep track of how many snakes we move and only update game_step when all snakes have moved
+        self.move_all_snakes = move_all_snakes # Used when simulating the game, all snakes move at once
 
 
     def eat_food(self, snake: typing.Dict, pos: typing.Dict) -> None:
@@ -209,8 +210,12 @@ class Board:
 
         self._reset_observation_buffer() # Reset observation buffer after we moved all objects
 
-        self.minor_game_step += 0.5
-        self.game_step += int(self.minor_game_step)
+        if self.move_all_snakes:
+            self.game_step += 1
+            self.minor_game_step = self.game_step
+        else:
+            self.minor_game_step += 0.5
+            self.game_step += int(self.minor_game_step)
 
         # Add food if needed
         add_food = self._check_food_needing_placement()
@@ -593,7 +598,7 @@ class Board:
             "name": "Sneky McSnek Face " + str(id_number%2),
             "health": self.max_health,
             "body": body,
-            "latency": 123,
+            "latency": 50,
             "head": body[0],
             "length": len(body),
             "shout": "why are we shouting??",

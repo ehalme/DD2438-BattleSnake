@@ -16,12 +16,12 @@ def numpy_array_to_surface(array):
 
 if __name__ == "__main__":       
     manual_control = False
-    fps = 2
-    max_depth = 5
+    fps = 1.2
+    max_depth = 15
 
     heuristic = Heuristic(weights)
     
-    boardState = Board(None, max_health=100, hazard_decay=2, step_decay=1, print_logs=True)
+    boardState = Board(None, max_health=100, hazard_decay=0, step_decay=1, move_all_snakes=True, print_logs=True)
     manual_snake = boardState.snakes[0]
   
     # Scale factor for rendering the image larger
@@ -48,10 +48,10 @@ if __name__ == "__main__":
             teams[snake["name"]] = [color_name + ", ", ]
 
     # Main loop
+    pool = ThreadPool(len(boardState.snakes))
     running = True 
-    last_update = time.time_ns() + 0.25*1e9 # wait 0.25 seconds before starting
+    clock = pygame.time.Clock()
     manual_action = None
-    actions = dict()
     action_manual = Action.up
     while running:
         for event in pygame.event.get():
@@ -68,29 +68,27 @@ if __name__ == "__main__":
                 elif event.key == pygame.K_a:
                     action_manual = Action.left                    
 
-        if time.time_ns() - last_update > 1/fps*1e9:
-            def update_snake(json_board, snake):
-                if manual_control and snake["id"] == manual_snake["id"]:
-                    actions[manual_snake["id"]] = action_manual
-                    return
+        
+        actions = dict()
+        def update_snake(json_board, snake):
+            if manual_control and snake["id"] == manual_snake["id"]:
+                actions[manual_snake["id"]] = action_manual
+                return
 
-                game_state = {
-                    "game": {"timeout": 500, },
-                    "board": json_board,
-                    "you": snake,
-                }
+            game_state = {
+                "game": {"timeout": 500, },
+                "board": json_board,
+                "you": snake,
+            }
 
-                action = start_minimax(game_state, heuristic, max_depth=max_depth, max_health=100, hazard_decay=0, step_decay=1)
-                actions[snake["id"]] = action
-                #actions = {'totally-unique-snake-id1': Action.up, 'totally-unique-snake-id2': Action.up, 'totally-unique-snake-id3': Action.down}
+            action = start_minimax(game_state, heuristic, max_depth=max_depth, max_health=100, hazard_decay=0, step_decay=1)
+            actions[snake["id"]] = action
+            #actions = {'totally-unique-snake-id1': Action.up, 'totally-unique-snake-id2': Action.up, 'totally-unique-snake-id3': Action.down}
 
-            json_boards = [boardState.get_json_board() for _ in range(len(boardState.snakes))]
-            with ThreadPool(len(boardState.snakes)) as p: # process all snakes at the same time
-                p.starmap(update_snake, zip(json_boards, boardState.snakes))
-            
-            boardState.move_snakes(actions)
-            last_update = time.time_ns()
-            
+        json_boards = [boardState.get_json_board() for _ in range(len(boardState.snakes))]
+        pool.starmap(update_snake, zip(json_boards, boardState.snakes)) # process all snakes at the same time
+
+        boardState.move_snakes(actions)            
                     
         img = boardState.get_board_img()
         img_surface = numpy_array_to_surface(img)
@@ -116,4 +114,8 @@ if __name__ == "__main__":
         # Update the display
         pygame.display.flip()
 
+        # Cap the frame rate to fps
+        clock.tick(fps)
+
     pygame.quit()
+    pool.close()
