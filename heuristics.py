@@ -1,5 +1,6 @@
 import typing
 from board import Board
+from collections import deque
 
 class Heuristic:
     def __init__(self, weights: typing.Dict):
@@ -80,6 +81,9 @@ class Heuristic:
         # Eat food reward
         if my_snake_dict["head"] in board.foods:
             score += self.weights["eat_food"]
+
+        reachable_cells = self.flood_fill(board, my_snake)
+        score += self.weights["flood_fill"] * reachable_cells
     
         return score
 
@@ -157,3 +161,28 @@ class Heuristic:
 
     def distance_metric(self, point1: typing.Dict, point2: typing.Dict) -> float:
         return abs(point1['x'] - point2['x']) + abs(point1['y'] - point2['y'])
+
+    def flood_fill(self, board: Board, my_snake_id: str) -> int:
+        visited = [[False for x in range(board.width)] for y in range(board.height)]
+        my_snake = board.get_snake(my_snake_id)
+        my_snake_head_x = my_snake["body"][0]["x"]
+        my_snake_head_y = my_snake["body"][0]["y"]
+        snakes = board.snakes
+        for snake in snakes:
+            for snake_body in snake["body"]:
+                visited[snake["x"]][snake["y"]] = True
+
+        queue = deque([(my_snake_head_x, my_snake_head_y)])
+        reachable_cells = 0
+
+        while queue:
+            x, y = queue.popleft()
+            if 0 <= x < board.width and 0 <= y < board.height and not visited[x][y]:
+                visited[x][y] = True
+                reachable_cells += 1
+                queue.append((x+1, y))
+                queue.append((x-1, y))
+                queue.append((x, y+1))
+                queue.append((x, y-1))
+
+        return reachable_cells

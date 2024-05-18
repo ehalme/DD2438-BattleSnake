@@ -7,4 +7,5 @@ weights = {
             "enemy_killed": 10,
             "friendly_killed": -10,
             "health": 0.02,
+            "flood_fill": 0.05
         }
