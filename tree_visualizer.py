@@ -64,7 +64,6 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
     calculation_time *= 1e6 # convert ms (10^3) to ns (10^9)
     
     food_spawn_chances = np.random.rand(20) # Create a vector of random numbers so that every environment spawns food in the same way
-    food_spawn_chances[1] = 0.1
     my_snake = game_state['you']['id']
     init_board = Board(game_state["board"], max_health=max_health, hazard_decay=hazard_decay, step_decay=step_decay, food_spawn_chances=food_spawn_chances)
 
@@ -209,8 +208,8 @@ if __name__ == "__main__":
     # Font size
     font_size = 12
     # Display which graph is drawn on, increase for larger depths (max ~50_000). Zooming in is slow on large images
-    large_width = 10_000
-    large_height = 10_000
+    large_width = 15_000
+    large_height = 15_000
     # Set seed
     #random.seed(0)
     # Custom game state
