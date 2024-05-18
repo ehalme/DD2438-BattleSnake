@@ -104,6 +104,8 @@ class Board:
         snakes_to_move = []
 
         for snake_id in moves:
+            if snake_id in self.snake_lookup:
+                continue
             snake = self.snakes[self.snake_lookup[snake_id]]
 
             head = snake["head"]
@@ -168,6 +170,8 @@ class Board:
         # Check if any snakes should be killed off after they moved...
         snakes_to_kill = []
         for snake_id in moves:
+            if snake_id in self.snake_lookup:
+                continue
             snake = self.snakes[self.snake_lookup[snake_id]]
             
             head = snake["head"]

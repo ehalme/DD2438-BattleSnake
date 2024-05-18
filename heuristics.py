@@ -37,7 +37,7 @@ class Heuristic:
                 closest_food_distance = 0.5
 
             score += self.weights["food_distance"] * 1/closest_food_distance
-
+        """
         # Closest enemy
         enemy_distances = self.calculate_distance_to_snakes(board, my_snake, enemy_snakes)
         closest_enemy_point, closest_enemy_distance = self.find_closest_point(enemy_distances)
@@ -57,7 +57,7 @@ class Heuristic:
                 closest_friendly_distance = 0.5
             
             score += self.weights["friendly_distance"] * 1/closest_friendly_distance
-
+        """
         # Did we kill enemies?
         killed_enemies = self.calculate_killed_snakes(board, my_snake, enemy_snakes)
         score += self.weights["enemy_killed"] * killed_enemies
@@ -82,8 +82,12 @@ class Heuristic:
         if my_snake_dict["head"] in board.foods:
             score += self.weights["eat_food"]
 
-        #reachable_cells = self.flood_fill(board, my_snake)
-        #score += self.weights["flood_fill"] * reachable_cells
+        # Reachable cells rewards
+        reachable_cells = self.flood_fill(board, my_snake)
+        score += self.weights["flood_fill"] * reachable_cells
+
+        length = my_snake_dict["length"]
+        score += self.weights["length"] * length
     
         return score
 
@@ -164,13 +168,13 @@ class Heuristic:
 
     def flood_fill(self, board: Board, my_snake_id: str) -> int:
         visited = [[False for x in range(board.width)] for y in range(board.height)]
-        my_snake = board.get_snake(my_snake_id)
-        my_snake_head_x = my_snake["body"][0]["x"]
-        my_snake_head_y = my_snake["body"][0]["y"]
+        my_snake, _ = board.get_snake(my_snake_id)
+        my_snake_head_x = my_snake["head"]["x"]
+        my_snake_head_y = my_snake["head"]["y"]
         snakes = board.snakes
         for snake in snakes:
             for snake_body in snake["body"]:
-                visited[snake["x"]][snake["y"]] = True
+                visited[snake_body["x"]][snake_body["y"]] = True
 
         queue = deque([(my_snake_head_x, my_snake_head_y)])
         reachable_cells = 0

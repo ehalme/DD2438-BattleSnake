@@ -86,7 +86,8 @@ def minimax(board: Board, my_snake: str, heuristic: Heuristic, calculation_time:
         return transposition_table[observation]
     
     friendly_snakes, enemy_snakes, my_snake_alive = get_other_snakes(board, my_snake)
-    win = len(enemy_snakes) == 0
+    #win = len(enemy_snakes) == 0
+    win = False
     lose = not my_snake_alive # len(friendly_snakes) == 0 and # removing this makes the simulation asymmetric but makes other things easier
     # might want to simulate after the snake is dead too
 

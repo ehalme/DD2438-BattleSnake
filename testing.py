@@ -17,7 +17,7 @@ def numpy_array_to_surface(array):
 if __name__ == "__main__":       
     manual_control = False
     fps = 1.2
-    max_depth = 15
+    max_depth = 30
 
     heuristic = Heuristic(weights)
     
