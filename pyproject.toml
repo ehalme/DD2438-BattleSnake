@@ -11,6 +11,7 @@ replit = "^3.2.4"
 Flask = "^2.2.0"
 webcolors = "^1.13"
 pygame = "^2.5.2"
+wandb = "^0.17.0"
 
 [tool.poetry.dev-dependencies]
 debugpy = "^1.6.2"

@@ -1,8 +1,8 @@
 # The command that runs the program. Commented out because it is not run when the interpreter command is set
-# run = ["python3", "main.py"]
+run = ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "main:app"]
 # The primary language of the repl. There can be others, though!
-language = "python3"
-entrypoint = "main.py"
+##language = "python3"
+##entrypoint = "main.py"
 # A list of globs that specify which files and directories should
 # be hidden in the workspace.
 hidden = ["venv", ".config", "**/__pycache__", "**/.mypy_cache", "**/*.pyc"]
@@ -12,18 +12,18 @@ hidden = ["venv", ".config", "**/__pycache__", "**/.mypy_cache", "**/*.pyc"]
 channel = "stable-21_11"
 
 # The command to start the interpreter.
-[interpreter]
-  [interpreter.command]
-  args = [
-    "stderred",
-    "--",
-    "prybar-python3",
-    "-q",
-    "--ps1",
-    "\u0001\u001b[33m\u0002\u0001\u001b[00m\u0002 ",
-    "-i",
-  ]
-  env = { LD_LIBRARY_PATH = "$PYTHON_LD_LIBRARY_PATH" }
+# [interpreter]
+#   [interpreter.command]
+#   args = [
+#     "stderred",
+#     "--",
+#     "prybar-python3",
+#     "-q",
+#     "--ps1",
+#     "\u0001\u001b[33m\u0002\u0001\u001b[00m\u0002 ",
+#     "-i",
+#   ]
+#   env = { LD_LIBRARY_PATH = "$PYTHON_LD_LIBRARY_PATH" }
 
 [env]
 VIRTUAL_ENV = "/home/runner/${REPL_SLUG}/venv"
@@ -102,6 +102,10 @@ pattern = "**/*.py"
 
 [languages.python3.languageServer]
 start = "pylsp"
+
+[[ports]]
+localPort = 5000
+externalPort = 5000
 
 [[ports]]
 localPort = 8000

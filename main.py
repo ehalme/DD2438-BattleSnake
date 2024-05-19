@@ -46,8 +46,8 @@ def end(game_state: typing.Dict):
 # Valid moves are "up", "down", "left", or "right"
 # See https://docs.battlesnake.com/api/example-move for available data
 def move(game_state: typing.Dict) -> typing.Dict:
-    max_depth = 8
-    
+    max_depth = 30
+
     heuristic = Heuristic(weights)
 
     next_move = start_minimax(game_state, heuristic, max_depth, 100, 0, 1).name
@@ -56,13 +56,12 @@ def move(game_state: typing.Dict) -> typing.Dict:
 
 
 # Start server when `python main.py` is run
-if __name__ == "__main__":
-    from server import run_server
+#if __name__ == "__main__":
+from server import run_server
 
-    run_server({
-        "info": info, 
-        "start": start, 
-        "move": move, 
-        "end": end
-    })
-
+app, host, port = run_server({
+    "info": info,
+    "start": start,
+    "move": move,
+    "end": end
+})

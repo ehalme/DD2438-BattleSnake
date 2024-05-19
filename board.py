@@ -32,7 +32,7 @@ class Board:
 
     TODO: Check if the snake only should decay if the head is in the hazard or of any body part is in the hazard. -edit: will not do decay....
     """    
-    def __init__(self, board: typing.Dict | None, max_health: int, hazard_decay: int, step_decay: int, food_spawn_chance=0.15, min_food=1, food_spawn_chances=None, move_all_snakes=False, print_logs=False):
+    def __init__(self, board: typing.Dict, max_health: int, hazard_decay: int, step_decay: int, food_spawn_chance=0.15, min_food=1, food_spawn_chances=None, move_all_snakes=False, print_logs=False):
         """
         Disable decay by setting it to a value less than 0.
         Randomly initialize the environment by setting board = None.

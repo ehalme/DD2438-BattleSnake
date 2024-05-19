@@ -1,5 +1,6 @@
 { pkgs }: {
   deps = [
+    pkgs.gitFull
     pkgs.portmidi
     pkgs.libpng
     pkgs.libjpeg
