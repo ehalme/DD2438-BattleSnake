@@ -15,8 +15,8 @@ def train():
         "food_distance": wandb.config.food_distance,
         "eat_food": wandb.config.eat_food,
         "death": -1000,
-        "enemy_killed": 100,
-        "friendly_killed": -100,
+        "enemy_killed": 10, # sweep1: 100
+        "friendly_killed": -10, # sweep1: -100
         "health":  wandb.config.health,
         "flood_fill":  wandb.config.flood_fill,
         "length":  wandb.config.length
@@ -24,6 +24,7 @@ def train():
     
     mean_steps = []
     for iteration in range(10):
+        print("Iteration: ", iteration)
         max_depth = 30
         max_steps = 500
         
@@ -100,12 +101,17 @@ def main(sweep_id, i):
     wandb.agent(sweep_id=sweep_id, function=train, count=200)
 
 if __name__ == "__main__":
+    inp = input("Start sweep Y/N? ")
+
+    if inp.lower() != "y":
+        exit(1)
+
     wandb.login()
 
     # Sweep config
     sweep_configuration = {
         'method': 'bayes',
-        'name': 'sweep1',
+        'name': 'sweep_normalized',
         'metric': {'goal': 'maximize', 'name': 'mean_steps'},
         'parameters': 
         {

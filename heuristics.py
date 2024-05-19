@@ -51,11 +51,11 @@ class Heuristic:
         """
         # Did we kill enemies?
         killed_enemies = self.calculate_killed_snakes(board, my_snake, enemy_snakes)
-        score += self.weights["enemy_killed"] * killed_enemies
+        score += self.weights["enemy_killed"] * killed_enemies / 2
 
         # Did we kill friendlies? :(
         killed_friendly = self.calculate_killed_snakes(board, my_snake, friendly_snakes)
-        score += self.weights["friendly_killed"] * killed_friendly 
+        score += self.weights["friendly_killed"] * killed_friendly / 2
 
         # Are we alive? :O
         my_snake_dict, is_alive = board.get_snake(my_snake)
@@ -67,18 +67,19 @@ class Heuristic:
         
         # Health reward
         current_health = my_snake_dict["health"]
-        score += self.weights["health"] * current_health
+        score += self.weights["health"] * current_health / board.max_health
 
         # Eat food reward
         if my_snake_dict["head"] in board.foods:
             score += self.weights["eat_food"]
 
         # Reachable cells rewards
+        board_size = board.width * board.height
         reachable_cells = self.flood_fill(board, my_snake)
-        score += self.weights["flood_fill"] * reachable_cells
+        score += self.weights["flood_fill"] * reachable_cells / board_size
 
         length = my_snake_dict["length"]
-        score += self.weights["length"] * length
+        score += self.weights["length"] * length / board_size
     
         return score
 
