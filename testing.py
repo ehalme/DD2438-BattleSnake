@@ -16,7 +16,7 @@ def numpy_array_to_surface(array):
 
 if __name__ == "__main__":       
     manual_control = False
-    fps = 1.2
+    fps = 2
     max_depth = 30
 
     heuristic = Heuristic(weights)
@@ -54,6 +54,7 @@ if __name__ == "__main__":
     clock = pygame.time.Clock()
     manual_action = None
     action_manual = Action.up
+    start_timer = time.time()
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -69,27 +70,27 @@ if __name__ == "__main__":
                 elif event.key == pygame.K_a:
                     action_manual = Action.left                    
 
-        
-        actions = dict()
-        def update_snake(json_board, snake):
-            if manual_control and snake["id"] == manual_snake["id"]:
-                actions[manual_snake["id"]] = action_manual
-                return
+        if time.time() - start_timer > 0.05:
+            actions = dict()
+            def update_snake(json_board, snake):
+                if manual_control and snake["id"] == manual_snake["id"]:
+                    actions[manual_snake["id"]] = action_manual
+                    return
 
-            game_state = {
-                "game": {"timeout": 500, },
-                "board": json_board,
-                "you": snake,
-            }
+                game_state = {
+                    "game": {"timeout": 500, },
+                    "board": json_board,
+                    "you": snake,
+                }
 
-            action = start_minimax(game_state, heuristic, max_depth=max_depth, max_health=100, hazard_decay=0, step_decay=1)
-            actions[snake["id"]] = action
-            #actions = {'totally-unique-snake-id1': Action.up, 'totally-unique-snake-id2': Action.up, 'totally-unique-snake-id3': Action.down}
+                action = start_minimax(game_state, heuristic, max_depth=max_depth, max_health=100, hazard_decay=0, step_decay=1)
+                actions[snake["id"]] = action
+                #actions = {'totally-unique-snake-id1': Action.up, 'totally-unique-snake-id2': Action.up, 'totally-unique-snake-id3': Action.down}
 
-        json_boards = [boardState.get_json_board() for _ in range(len(boardState.snakes))]
-        pool.starmap(update_snake, zip(json_boards, boardState.snakes)) # process all snakes at the same time
+            json_boards = [boardState.get_json_board() for _ in range(len(boardState.snakes))]
+            pool.starmap(update_snake, zip(json_boards, boardState.snakes)) # process all snakes at the same time
 
-        boardState.move_snakes(actions)            
+            boardState.move_snakes(actions)            
                     
         img = boardState.get_board_img()
         img_surface = numpy_array_to_surface(img)

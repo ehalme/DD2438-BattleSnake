@@ -159,7 +159,7 @@ class Heuristic:
         return abs(point1['x'] - point2['x']) + abs(point1['y'] - point2['y'])
 
     def flood_fill(self, board: Board, my_snake_id: str) -> int:
-        visited = [[False for x in range(board.width)] for y in range(board.height)]
+        visited = [[False for x in range(board.height)] for y in range(board.width)]
         my_snake, _ = board.get_snake(my_snake_id)
         my_snake_head_x = my_snake["head"]["x"]
         my_snake_head_y = my_snake["head"]["y"]

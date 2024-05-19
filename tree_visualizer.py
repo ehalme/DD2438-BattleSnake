@@ -192,7 +192,7 @@ if __name__ == "__main__":
     screen_width = 2000
     screen_height = 1200
     # Scale factor for rendering the image larger (game snapshots)
-    SCALE_FACTOR = 10
+    SCALE_FACTOR = 15
     # Depth to run minimax
     max_depth = 4
     # Split images from the same depth into multiple rows
@@ -203,17 +203,18 @@ if __name__ == "__main__":
     line_opacity = 255
     # Tree separations
     image_x_separation = 60
-    image_y_separation = 120 
-    text_y_separation = 15
+    image_y_separation = 150 
+    text_y_separation = 20
     # Font size
-    font_size = 12
+    font_size = 16
     # Display which graph is drawn on, increase for larger depths (max ~50_000). Zooming in is slow on large images
     large_width = 15_000
     large_height = 15_000
     # Set seed
     #random.seed(0)
+    #np.random.seed(2)
     # Custom game state
-    use_predefined_game_state = False
+    use_predefined_game_state = True
     # iterative deepening layer (max of max_depth, min of 1)
     depth_layer = max_depth
     # disable pruning
