@@ -24,7 +24,7 @@ from board import Board, Action
 from heuristics import Heuristic
 
 
-def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int, max_health: int, hazard_decay: int, step_decay: int) -> Action:
+def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int, max_health: int, hazard_decay: int, step_decay: int, print_logs=True) -> Action:
     """
     Does a minimax run from this starting game_state using the
     specified heuristic.
@@ -32,7 +32,7 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
     """
     timeout = game_state["game"]["timeout"]
     latency = int(game_state["you"]["latency"]) if game_state["you"]["latency"] != '' else 100
-    calculation_time = timeout - latency - 60 # X ms for padding
+    calculation_time = timeout - latency - 80 # X ms for padding
     calculation_time *= 1e6 # convert ms (10^3) to ns (10^9)
     
     food_spawn_chances = np.random.rand(20) # Create a vector of random numbers so that every environment spawns food in the same way
@@ -68,7 +68,8 @@ def start_minimax(game_state: typing.Dict, heuristic: Heuristic, max_depth: int,
         if used_time >= calculation_time:
             break
 
-    print("Minimax time: ", (time.time_ns() - start_time) * 1e-6, "Depth:", depth)
+    if print_logs:
+        print("Minimax time: ", (time.time_ns() - start_time) * 1e-6, "Depth:", depth)
 
     if best_actions is None:
         return Action.up
