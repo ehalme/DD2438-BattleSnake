@@ -33,30 +33,21 @@ class Heuristic:
         closest_food_point, closest_food_distance = self.find_closest_point(food_distances)
 
         if closest_food_distance is not None:
-            if closest_food_distance == 0:
-                closest_food_distance = 0.5
-
-            score += self.weights["food_distance"] * 1/closest_food_distance
+            score += self.weights["food_distance"] * 1/(closest_food_distance + 1)
         """
         # Closest enemy
         enemy_distances = self.calculate_distance_to_snakes(board, my_snake, enemy_snakes)
         closest_enemy_point, closest_enemy_distance = self.find_closest_point(enemy_distances)
 
         if closest_enemy_distance is not None:
-            if closest_enemy_distance == 0:
-                closest_enemy_distance = 0.5
-
-            score += self.weights["enemy_distance"] * 1/closest_enemy_distance
+            score += self.weights["enemy_distance"] * 1/(closest_enemy_distance + 1)
 
         # Closest friendly 
         friendly_distances = self.calculate_distance_to_snakes(board, my_snake, friendly_snakes)
         closest_friendly_point, closest_friendly_distance = self.find_closest_point(friendly_distances)
 
         if closest_friendly_distance is not None:
-            if closest_friendly_distance == 0:
-                closest_friendly_distance = 0.5
-            
-            score += self.weights["friendly_distance"] * 1/closest_friendly_distance
+            score += self.weights["friendly_distance"] * 1/(closest_friendly_distance + 1)
         """
         # Did we kill enemies?
         killed_enemies = self.calculate_killed_snakes(board, my_snake, enemy_snakes)
